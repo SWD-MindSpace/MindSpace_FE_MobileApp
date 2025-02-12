@@ -43,7 +43,7 @@ const HomeScreen = ({ navigation }) => {
                         <Text style={styles.rememberMeText}>Remember Me</Text>
                     </Pressable>
 
-                    <TouchableOpacity onPress={() => Alert.alert("Forgot Password?")}>
+                    <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                         <Text style={styles.forgotPassword}>Forgot Password?</Text>
                     </TouchableOpacity>
                 </View>
