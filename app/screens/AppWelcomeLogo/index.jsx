@@ -22,14 +22,14 @@ const AppWelcomeLogo = () => {
                 useNativeDriver: true,
             }),
         ]).start(() => {
-            navigation.replace('HomeScreen'); // Ensure this matches exactly in Navigator.js
+            navigation.replace('HomeScreen'); 
         });
     }, [fadeAnim, navigation]);
 
     return (
         <View style={styles.container}>
             <Animated.Image 
-                source={require('../assets/images/AppLogoImage.png')} 
+                source={require('@/assets/images/AppLogoImage.png')} 
                 style={[styles.logo, { opacity: fadeAnim }]} 
             />
         </View>
