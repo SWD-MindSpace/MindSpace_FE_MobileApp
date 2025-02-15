@@ -6,7 +6,8 @@ import HomeScreen from '@/app/screens/HomeScreen';
 import MainScreen from '@/app/screens/MainScreen';
 import ForgotPassword from '@/app/screens/ForgotPassword';
 import VerifiedMail from '@/app/screens/VerifiedMail';
-const Navigator = () => {
+
+export default function ScreenLayout() {
     const Stack = createNativeStackNavigator();
     return (
         <Stack.Navigator>
@@ -18,7 +19,5 @@ const Navigator = () => {
         </Stack.Navigator>
     )
 }
-
-export default Navigator
 
 const styles = StyleSheet.create({})

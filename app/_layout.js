@@ -1,13 +1,12 @@
 import { StyleSheet, View } from 'react-native'
 import React from 'react'
-import { NavigationContainer } from '@react-navigation/native'
-import Navigator from '@/navigation/Navigator';
+import ScreenLayout from './screens/_layout';
 
 export default function rootLayout() {
   return (
-      <View style={styles.container}>
-        <Navigator />
-      </View>
+    <View style={styles.container}>
+      <ScreenLayout />
+    </View>
   );
 };
 
