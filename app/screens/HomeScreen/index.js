@@ -1,17 +1,53 @@
 import { Alert, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import React, { useState } from 'react'
+
+
 const HomeScreen = ({ navigation }) => {
+    // const apiURL = "https://192.168.101.2:7096/api/v1/identity/login";
+    const apiURL = "https://localhost:7096/api/v1/identity/login"
+    // const apiURL = "http://localhost:8010/proxy/api/v1/identity/login";
+    // const apiURL = "https://127.0.0.1:7096/api/v1/identity/login"
+
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
 
-    const isValid = () => {
-        if (username !== '' && password !== '') {
-            navigation.navigate('MainScreen')
-        } else {
-            Alert.alert('Please enter both username and password to login!!')
+    async function requestToken() {
+        if (username === '' || password === '') {
+            Alert.alert('Error', 'Please enter both username and password.');
+            return;
+        }
+
+        try {
+            const response = await fetch(apiURL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    Email: username,
+                    password: password,
+                }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                Alert.alert(`Login failed: ${response.status}`)
+            }
+            if (response.ok) {
+                console.log("ID Token:", data.id_token);
+                console.log("Access Token:", data.access_token);
+
+                navigation.navigate('MainScreen');
+            } else {
+                Alert.alert('Login Failed', 'Invalid username or password.');
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            Alert.alert('Error', 'Something went wrong. Please try again.');
         }
     }
+
     return (
         <View style={styles.container}>
             <View style={styles.welcomebackTitle}>
@@ -22,18 +58,16 @@ const HomeScreen = ({ navigation }) => {
                 <TextInput
                     placeholder='Enter username'
                     value={username}
-                    onChangeText={(newUsername) => setUsername(newUsername)
-                    }
+                    onChangeText={setUsername}
                     style={styles.input}
                 />
                 <TextInput
                     placeholder='Enter password'
                     value={password}
-                    onChangeText={(newPassword) => setPassword(newPassword)
-                    }
+                    onChangeText={setPassword}
+                    secureTextEntry
                     style={styles.input}
                 />
-                {/* Remember me & Forgot password Section */}
                 <View style={styles.rememberForgotContainer}>
                     <Pressable
                         style={styles.checkboxContainer}
@@ -43,18 +77,18 @@ const HomeScreen = ({ navigation }) => {
                         <Text style={styles.rememberMeText}>Remember Me</Text>
                     </Pressable>
 
-                    <TouchableOpacity onPress={() => Alert.alert("Forgot Password?")}>
+                    <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                         <Text style={styles.forgotPassword}>Forgot Password?</Text>
                     </TouchableOpacity>
                 </View>
-                {/* Login Button */}
-                <TouchableOpacity style={styles.loginButton} onPress={isValid}>
+                <TouchableOpacity style={styles.loginButton} onPress={requestToken}>
                     <Text style={styles.buttonText}>Sign in</Text>
                 </TouchableOpacity>
             </View>
-        </View >
+        </View>
     );
 };
+
 
 export default HomeScreen;
 
