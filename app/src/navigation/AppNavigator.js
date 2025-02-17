@@ -1,13 +1,13 @@
 import { StyleSheet } from 'react-native'
 import React from 'react'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import AppWelcomeLogo from '@/app/screens/AppWelcomeLogo';
-import HomeScreen from '@/app/screens/HomeScreen';
-import MainScreen from '@/app/screens/MainScreen';
-import ForgotPassword from '@/app/screens/ForgotPassword';
-import VerifiedMail from '@/app/screens/VerifiedMail';
+import AppWelcomeLogo from '@/app/src/screens/AppWelcomeLogo';
+import HomeScreen from '@/app/src/screens/HomeScreen';
+import MainScreen from '@/app/src/screens/MainScreen';
+import ForgotPassword from '@/app/src/screens/ForgotPassword';
+import VerifiedMail from '@/app/src/screens/VerifiedMail';
 
-export default function ScreenLayout() {
+export default function AppNavigator() {
     const Stack = createNativeStackNavigator();
     return (
         <Stack.Navigator>

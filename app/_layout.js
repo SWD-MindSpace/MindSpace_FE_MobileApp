@@ -1,12 +1,16 @@
 import { StyleSheet, View } from 'react-native'
 import React from 'react'
-import ScreenLayout from './screens/_layout';
+import { NavigationContainer } from "@react-navigation/native";
+import AppNavigator from '@/app/src/navigation/AppNavigator';
+import AuthProvider from "@/app/src/context/AuthContext";
 
 export default function rootLayout() {
   return (
-    <View style={styles.container}>
-      <ScreenLayout />
-    </View>
+    <AuthProvider>
+        <View style={styles.container}>
+          <AppNavigator />
+        </View>
+    </AuthProvider>
   );
 };
 
