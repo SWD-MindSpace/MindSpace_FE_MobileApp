@@ -3,8 +3,11 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '@/app/src/context/AuthContext';
 
 const HomeScreen = ({ navigation }) => {
-    const { signIn } = useContext(AuthContext);
-    
+    // const apiURL = "https://192.168.101.2:7096/api/v1/identity/login";
+    const apiURL = "https://localhost:7096/api/v1/identity/login"
+    // const apiURL = "http://localhost:8010/proxy/api/v1/identity/login";
+    // const apiURL = "https://127.0.0.1:7096/api/v1/identity/login"
+
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
