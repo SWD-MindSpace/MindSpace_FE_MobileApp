@@ -22,7 +22,7 @@ const AppWelcomeLogo = () => {
                 useNativeDriver: true,
             }),
         ]).start(() => {
-            navigation.replace('HomeScreen'); 
+            navigation.replace('LoginScreen'); 
         });
     }, [fadeAnim, navigation]);
 

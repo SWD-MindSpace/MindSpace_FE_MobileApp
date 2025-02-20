@@ -1,28 +1,45 @@
 import { Alert, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import React, { useState, useContext } from 'react';
-import { AuthContext } from '@/app/src/context/AuthContext';
+import React, { useState } from 'react';
+import { getAuthToken, saveAuthToken } from '@/app/src/utils/storage'; // ✅ Import storage functions
 
-const HomeScreen = ({ navigation }) => {
-    // const apiURL = "https://192.168.101.2:7096/api/v1/identity/login";
+const LoginScreen = ({ navigation }) => {
+    const apiURL = "http://192.168.101.2:5021/api/v1/identity/login";
     // const apiURL = "https://localhost:7096/api/v1/identity/login"
     // const apiURL = "http://localhost:8010/proxy/api/v1/identity/login";
     // const apiURL = "https://127.0.0.1:7096/api/v1/identity/login"
-    const apiURL = "http://10.0.2.2:5021/api/v1/identity/login";
+    // const apiURL = "http://10.0.2.2:5021/api/v1/identity/login";
+
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
 
     const handleLogin = async () => {
-        if (!username || !password) {
-            Alert.alert('Error', 'Please enter both username and password.');
-            return;
-        }
-
         try {
-            await signIn(username, password);
+            const response = await fetch(apiURL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    Email: username,
+                    password: password,
+                }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(`Login failed: ${response.status} - ${data.message || "Invalid request"}`);
+            }
+
+            if (data.access_token) {
+                await saveAuthToken(data.access_token);
+                console.log("Token saved successfully!");
+            }
+
             navigation.navigate('MainScreen');
         } catch (error) {
-            Alert.alert('Login Failed', error.message || 'Invalid username or password.');
+            console.log("Error:", error.message);
+            Alert.alert("Login Failed", error.message);
         }
     };
 
@@ -64,7 +81,7 @@ const HomeScreen = ({ navigation }) => {
     );
 };
 
-export default HomeScreen;
+export default LoginScreen;
 
 const styles = StyleSheet.create({
     container: {
