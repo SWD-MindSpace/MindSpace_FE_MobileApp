@@ -1,11 +1,11 @@
 import { StyleSheet, View } from 'react-native'
 import React from 'react'
-import ScreenLayout from './screens/_layout';
+import AppNavigator from '@/app/src/navigation/AppNavigator';
 
 export default function rootLayout() {
   return (
     <View style={styles.container}>
-      <ScreenLayout />
+      <AppNavigator />
     </View>
   );
 };

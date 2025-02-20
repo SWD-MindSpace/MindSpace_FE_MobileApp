@@ -1,23 +1,19 @@
-import { Alert, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
+import { Alert, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { getAuthToken, saveAuthToken } from '@/app/src/utils/storage'; // ✅ Import storage functions
 
-
-const HomeScreen = ({ navigation }) => {
-    // const apiURL = "https://192.168.101.2:7096/api/v1/identity/login";
-    const apiURL = "https://localhost:7096/api/v1/identity/login"
+const LoginScreen = ({ navigation }) => {
+    const apiURL = "http://192.168.101.2:5021/api/v1/identity/login";
+    // const apiURL = "https://localhost:7096/api/v1/identity/login"
     // const apiURL = "http://localhost:8010/proxy/api/v1/identity/login";
     // const apiURL = "https://127.0.0.1:7096/api/v1/identity/login"
+    // const apiURL = "http://10.0.2.2:5021/api/v1/identity/login";
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
 
-    async function requestToken() {
-        if (username === '' || password === '') {
-            Alert.alert('Error', 'Please enter both username and password.');
-            return;
-        }
-
+    const handleLogin = async () => {
         try {
             const response = await fetch(apiURL, {
                 method: "POST",
@@ -32,21 +28,20 @@ const HomeScreen = ({ navigation }) => {
 
             const data = await response.json();
             if (!response.ok) {
-                Alert.alert(`Login failed: ${response.status}`)
+                throw new Error(`Login failed: ${response.status} - ${data.message || "Invalid request"}`);
             }
-            if (response.ok) {
-                console.log("ID Token:", data.id_token);
-                console.log("Access Token:", data.access_token);
 
-                navigation.navigate('MainScreen');
-            } else {
-                Alert.alert('Login Failed', 'Invalid username or password.');
+            if (data.access_token) {
+                await saveAuthToken(data.access_token);
+                console.log("Token saved successfully!");
             }
+
+            navigation.navigate('MainScreen');
         } catch (error) {
-            console.error("Error:", error);
-            Alert.alert('Error', 'Something went wrong. Please try again.');
+            console.log("Error:", error.message);
+            Alert.alert("Login Failed", error.message);
         }
-    }
+    };
 
     return (
         <View style={styles.container}>
@@ -56,23 +51,20 @@ const HomeScreen = ({ navigation }) => {
             </View>
             <View style={styles.formInput}>
                 <TextInput
-                    placeholder='Enter username'
+                    placeholder="Enter username"
                     value={username}
                     onChangeText={setUsername}
                     style={styles.input}
                 />
                 <TextInput
-                    placeholder='Enter password'
+                    placeholder="Enter password"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
                     style={styles.input}
                 />
                 <View style={styles.rememberForgotContainer}>
-                    <Pressable
-                        style={styles.checkboxContainer}
-                        onPress={() => setRememberMe(!rememberMe)}
-                    >
+                    <Pressable style={styles.checkboxContainer} onPress={() => setRememberMe(!rememberMe)}>
                         <View style={[styles.checkbox, rememberMe && styles.checkedBox]} />
                         <Text style={styles.rememberMeText}>Remember Me</Text>
                     </Pressable>
@@ -81,7 +73,7 @@ const HomeScreen = ({ navigation }) => {
                         <Text style={styles.forgotPassword}>Forgot Password?</Text>
                     </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.loginButton} onPress={requestToken}>
+                <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
                     <Text style={styles.buttonText}>Sign in</Text>
                 </TouchableOpacity>
             </View>
@@ -89,8 +81,7 @@ const HomeScreen = ({ navigation }) => {
     );
 };
 
-
-export default HomeScreen;
+export default LoginScreen;
 
 const styles = StyleSheet.create({
     container: {
