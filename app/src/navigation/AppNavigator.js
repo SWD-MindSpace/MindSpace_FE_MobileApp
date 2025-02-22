@@ -13,7 +13,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import LoginScreen from '@/app/src/screens/LoginScreen';
 import { getAuthToken, removeAuthToken } from '@/app/src/utils/storage';
 import { useNavigation } from '@react-navigation/native';
-
+import BlogDetail from '@/app/src/screens/BlogDetail'
 
 function MainTabs() {
     const Tab = createBottomTabNavigator();
@@ -59,7 +59,7 @@ export default function AppNavigator() {
                 return;
             }
 
-            console.log("Token retrieved:", token); 
+            console.log("Token retrieved:", token);
 
             const response = await fetch(apiURL, {
                 method: "POST",
@@ -89,9 +89,6 @@ export default function AppNavigator() {
     return (
         <>
             <Stack.Navigator>
-
-                <Stack.Screen name='AppWelcomeLogo' component={AppWelcomeLogo} options={{ headerShown: false }} />
-                <Stack.Screen name='LoginScreen' component={LoginScreen} options={{ headerShown: false }} />
                 <Stack.Screen
                     name='MainScreen'
                     component={MainTabs}
@@ -112,6 +109,9 @@ export default function AppNavigator() {
                         ),
                     }}
                 />
+                <Stack.Screen name='AppWelcomeLogo' component={AppWelcomeLogo} options={{ headerShown: false }} />
+                <Stack.Screen name='LoginScreen' component={LoginScreen} options={{ headerShown: false }} />
+                <Stack.Screen name='BlogDetail' component={BlogDetail} />
                 <Stack.Screen name='ForgotPassword' component={ForgotPassword} />
                 <Stack.Screen name='VerifiedMail' component={VerifiedMail} />
             </Stack.Navigator>
