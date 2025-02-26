@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View, FlatList, Image, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import CONFIG from '@/app/src/config/config';
 
 const ServiceScreen = () => {
     const [programs, setPrograms] = useState([]);
     const navigation = useNavigation();
 
     useEffect(() => {
-        fetch("http://192.168.101.2:5021/api/v1/supporting-programs")
+        fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs`)
             .then((response) => response.json())
             .then((data) => setPrograms(data.data))
             .catch((error) => console.error("Error fetching programs:", error));

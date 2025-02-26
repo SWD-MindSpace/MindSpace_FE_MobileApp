@@ -1,11 +1,12 @@
 import { Image, FlatList, StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
+import CONFIG from '@/app/src/config/config';
 
 const { width } = Dimensions.get('window');
 
 const MainScreen = ({ navigation }) => {
-    const blogApiURL = "http://192.168.101.2:5021/api/v1/resources/blogs";
-    const articleApiURL = "http://192.168.101.2:5021/api/v1/resources/articles"; 
+    const blogApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/resources/blogs`;
+    const articleApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/resources/articles`; 
 
     const [blogs, setBlogs] = useState([]);
     const [articles, setArticles] = useState([]);

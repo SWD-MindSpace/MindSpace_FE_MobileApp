@@ -1,9 +1,10 @@
 import { Alert, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import React, { useState } from 'react';
-import { getAuthToken, saveAuthToken } from '@/app/src/utils/storage'; // ✅ Import storage functions
+import { saveAuthToken } from '@/app/src/utils/storage';
+import CONFIG from '@/app/src/config/config';
 
 const LoginScreen = ({ navigation }) => {
-    const apiURL = "http://192.168.101.2:5021/api/v1/identity/login";
+    const apiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/login`;
     // const apiURL = "https://localhost:7096/api/v1/identity/login"
     // const apiURL = "http://127.0.0.1:7096/api/v1/identity/login"
     // const apiURL = "http://10.0.2.2:5021/api/v1/identity/login";

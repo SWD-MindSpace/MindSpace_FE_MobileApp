@@ -1,12 +1,12 @@
 import { FlatList, Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import CONFIG from '@/app/src/config/config';
 
 const ResourceScreen = ({ navigation }) => {
-    const resourceApiURL = "http://192.168.101.2:5021/api/v1/tests";
+    const resourceApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/tests`;
     const [resources, setResources] = useState([]);
 
-    // Fetch Resources
     const getAllResources = async () => {
         try {
             const response = await fetch(resourceApiURL);
