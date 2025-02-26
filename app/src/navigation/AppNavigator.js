@@ -14,6 +14,8 @@ import LoginScreen from '@/app/src/screens/LoginScreen';
 import { getAuthToken, removeAuthToken } from '@/app/src/utils/storage';
 import { useNavigation } from '@react-navigation/native';
 import BlogDetail from '@/app/src/screens/BlogDetail'
+import ResourceDetailScreen from '../screens/ResourceDetailScreen';
+import SPDetailScreen from '../screens/SPDetailScreen';
 
 function MainTabs() {
     const Tab = createBottomTabNavigator();
@@ -111,7 +113,9 @@ export default function AppNavigator() {
                 />
                 <Stack.Screen name='AppWelcomeLogo' component={AppWelcomeLogo} options={{ headerShown: false }} />
                 <Stack.Screen name='LoginScreen' component={LoginScreen} options={{ headerShown: false }} />
+                <Stack.Screen name='ResourceDetailScreen' component={ResourceDetailScreen} />
                 <Stack.Screen name='BlogDetail' component={BlogDetail} />
+                <Stack.Screen name='SPDetailScreen' component={SPDetailScreen} />
                 <Stack.Screen name='ForgotPassword' component={ForgotPassword} />
                 <Stack.Screen name='VerifiedMail' component={VerifiedMail} />
             </Stack.Navigator>

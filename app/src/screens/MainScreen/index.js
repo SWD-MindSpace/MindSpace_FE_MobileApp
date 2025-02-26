@@ -4,38 +4,45 @@ import React, { useState, useRef, useEffect } from 'react';
 const { width } = Dimensions.get('window');
 
 const MainScreen = ({ navigation }) => {
+    const blogApiURL = "http://192.168.101.2:5021/api/v1/resources/blogs";
+    const articleApiURL = "http://192.168.101.2:5021/api/v1/resources/articles"; 
 
-    const blogData = [
-        {
-            title: "Latest blogs",
-            data: [
-                {
-                    id: 6,
-                    name: "How to Harness the Power of Positivity for Better Mental Health",
-                    imageLink: require("@/assets/images/blog1.png"),
+    const [blogs, setBlogs] = useState([]);
+    const [articles, setArticles] = useState([]);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const flatListRef = useRef(null);
 
-                },
-                {
-                    id: 7,
-                    name: "Dealing with the Death of Your Child",
-                    imageLink: require("@/assets/images/blog2.png"),
+    // Fetch blogs
+    const getAllBlog = async () => {
+        try {
+            const response = await fetch(blogApiURL);
+            const jsonData = await response.json();
+            if (jsonData && jsonData.data) {
+                setBlogs(jsonData.data);
+            }
+        } catch (error) {
+            console.error("Error fetching blog data:", error);
+        }
+    };
 
-                },
-                {
-                    id: 8,
-                    name: "Why Talking About Your Mental Health Matters",
-                    imageLink: require("@/assets/images/blog3.png"),
+    // Fetch articles
+    const getAllArticles = async () => {
+        try {
+            const response = await fetch(articleApiURL);
+            const jsonData = await response.json();
+            if (jsonData && jsonData.data) {
+                setArticles(jsonData.data);
+            }
+        } catch (error) {
+            console.error("Error fetching article data:", error);
+        }
+    };
 
-                },
-                {
-                    id: 9,
-                    name: "How to Cope with PTSD",
-                    imageLink: require("@/assets/images/blog4.png"),
+    useEffect(() => {
+        getAllBlog();
+        getAllArticles();
+    }, []);
 
-                },
-            ],
-        },
-    ];
     const headerBlogData = [
         {
             id: 1,
@@ -64,9 +71,6 @@ const MainScreen = ({ navigation }) => {
         },
     ];
 
-    const [activeIndex, setActiveIndex] = useState(0);
-    const flatListRef = useRef(null);
-
     useEffect(() => {
         const interval = setInterval(() => {
             const nextIndex = (activeIndex + 1) % headerBlogData.length;
@@ -79,7 +83,7 @@ const MainScreen = ({ navigation }) => {
 
     return (
         <ScrollView style={styles.container}>
-            {/* Swipeable Blog Header */}
+            {/* Swipeable Header Blog Section */}
             <FlatList
                 ref={flatListRef}
                 data={headerBlogData}
@@ -118,130 +122,191 @@ const MainScreen = ({ navigation }) => {
                 ))}
             </View>
 
+            {/* Latest Blogs Section */}
             <View style={styles.blogContainer}>
-                {blogData.map((section, index) => (
-                    <View key={index}>
-                        <Text style={styles.sectionHeader}>{section.title}</Text>
-                        <View style={{ flex: 1 }}>
-                            <FlatList
-                                data={section.data}
-                                keyExtractor={(item) => item.id.toString()}
-                                numColumns={2}
-                                scrollEnabled={false}
-                                renderItem={({ item }) => (
-                                    <View style={styles.blogItem}>
-                                        <TouchableOpacity onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}>
-                                            <View>
-                                                <Image source={item.imageLink} style={styles.blogImage} />
-                                            </View>
-                                            <View style={styles.textWrapper}>
-                                                <Text style={styles.blogText}>{item.name}</Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            />
+                <Text style={styles.sectionHeader}>Latest Blogs</Text>
+                <FlatList
+                    data={blogs}
+                    keyExtractor={(item) => item.id.toString()}
+                    numColumns={2}
+                    scrollEnabled={false}
+                    renderItem={({ item }) => (
+                        <View style={styles.blogItem}>
+                            <TouchableOpacity onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}>
+                                <Image source={{ uri: item.thumbnailUrl }} style={styles.blogImage} />
+                                <View style={styles.textWrapper}>
+                                    <Text style={styles.blogText}>{item.title}</Text>
+                                </View>
+                            </TouchableOpacity>
                         </View>
-                    </View>
-                ))}
+                    )}
+                />
             </View>
-        </ScrollView >
+
+            {/* Latest Articles Section */}
+            <View style={styles.blogContainer}>
+                <Text style={styles.sectionHeader}>Latest Articles</Text>
+                <FlatList
+                    data={articles}
+                    keyExtractor={(item) => item.id.toString()}
+                    scrollEnabled={false}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity
+                            style={styles.articleItem}
+                            onPress={() => navigation.navigate('ArticleDetail', { articleId: item.id })}
+                        >
+                            <Image source={{ uri: item.imageUrl }} style={styles.articleImage} />
+                            <View style={styles.articleTextContainer}>
+                                <Text style={styles.articleText}>{item.title}</Text>
+                                <Text style={styles.articleTime}>{item.publishedAt}</Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
+                />
+            </View>
+        </ScrollView>
     );
 };
 
 export default MainScreen;
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
+    container: { 
+        flex: 1 
     },
-    mainBlogContainer: {
-        width: width,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 10,
+
+    mainBlogContainer: { 
+        width: width, 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        paddingVertical: 10 
     },
-    mainImage: {
-        width: '90%',
-        height: 220,
-        borderRadius: 10,
+
+    mainImage: { 
+        width: '90%', 
+        height: 220, 
+        borderRadius: 10 
     },
-    mainText: {
-        fontWeight: 'bold',
-        fontSize: 18,
-        marginTop: 10,
-        textAlign: 'center',
-        paddingHorizontal: 10,
+
+    mainText: { 
+        fontWeight: 'bold', 
+        fontSize: 18, 
+        marginTop: 10, 
+        textAlign: 'center', 
+        paddingHorizontal: 10 
     },
-    readMoreButton: {
-        marginTop: 15,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        backgroundColor: '#007BFF',
-        borderRadius: 5,
+
+    readMoreButton: { 
+        marginTop: 15, 
+        paddingVertical: 10, 
+        paddingHorizontal: 20, 
+        backgroundColor: '#007BFF', 
+        borderRadius: 5 
     },
-    readMoreText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+
+    readMoreText: { 
+        color: 'white', 
+        fontSize: 16, 
+        fontWeight: 'bold' 
     },
-    indicatorContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginVertical: 10,
+
+    indicatorContainer: { 
+        flexDirection: 'row', 
+        justifyContent: 'center', 
+        marginVertical: 10 
     },
-    indicator: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#D3D3D3',
-        marginHorizontal: 5,
+
+    indicator: { 
+        width: 8, 
+        height: 8, 
+        borderRadius: 4, 
+        backgroundColor: '#D3D3D3', 
+        marginHorizontal: 5 
     },
-    activeIndicator: {
-        backgroundColor: '#007BFF',
-        width: 10,
-        height: 10,
+
+    activeIndicator: { 
+        backgroundColor: '#007BFF', 
+        width: 10, 
+        height: 10 
     },
-    blogContainer: {
-        flex: 1,
-        padding: 10,
+
+    blogContainer: { 
+        flex: 1, 
+        padding: 10 
     },
-    blogItem: {
-        width: '48%',
-        margin: '1%',
-        backgroundColor: '#fff',
-        padding: 10,
-        borderRadius: 8,
-        alignItems: 'center',
-        backgroundColor: 'lightblue',
+
+    blogItem: { 
+        width: '48%', 
+        margin: '1%', 
+        padding: 10, 
+        borderRadius: 8, 
+        alignItems: 'center', 
+        backgroundColor: 'lightblue' 
     },
-    blogImage: {
-        width: '100%',
-        height: 100,
-        borderRadius: 8,
+
+    blogImage: { 
+        width: '100%', 
+        height: 100, 
+        borderRadius: 8 
     },
-    textWrapper: {
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
-        marginTop: 5,
-        paddingTop: 5,
+
+    textWrapper: { 
+        borderTopWidth: 1, 
+        borderTopColor: '#E0E0E0', 
+        marginTop: 5, 
+        paddingTop: 5 
     },
-    blogText: {
-        fontSize: 14,
-        textAlign: 'center',
+
+    blogText: { 
+        fontSize: 16, 
+        fontWeight: '600', 
+        textAlign: 'center', 
+        marginTop: 5, 
+        color: '#333', 
+        paddingHorizontal: 5 
     },
-    sectionHeader: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginVertical: 10,
-        paddingBottom: 8,
-        borderBottomWidth: 2,
-        borderBottomColor: '#E0E0E0',
-        letterSpacing: 1,
+
+    sectionHeader: { 
+        fontSize: 18, 
+        fontWeight: 'bold', 
+        marginVertical: 10, 
+        paddingBottom: 8, 
+        borderBottomWidth: 2, 
+        borderBottomColor: '#E0E0E0', 
+        letterSpacing: 1 
+    },
+
+    articleItem: { 
+        flexDirection: 'row', 
+        backgroundColor: '#fff', 
+        borderRadius: 10, 
+        marginVertical: 8, 
+        overflow: 'hidden' 
+    },
+
+    articleImage: { 
+        width: '50%', 
+        height: 100, 
+        borderTopLeftRadius: 10, 
+        borderBottomLeftRadius: 10 
+    },
+
+    articleTextContainer: { 
+        width: '50%', 
+        padding: 10, 
+        justifyContent: 'center' 
+    },
+
+    articleText: { 
+        fontSize: 16, 
+        fontWeight: 'bold', 
+        color: '#333' 
+    },
+
+    articleTime: { 
+        fontSize: 14, 
+        color: '#777', 
+        marginTop: 4 
     },
 });
-
-
-
-
 
