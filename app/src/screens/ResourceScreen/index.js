@@ -20,13 +20,17 @@ const ResourceScreen = ({ navigation }) => {
 
     useFocusEffect(
         useCallback(() => {
-            loadTestHistory(); // Refresh test history when screen is focused
-        }, [])
+            loadTestHistory(); 
+        }, [userRole])
     );
 
     const loadUserRole = async () => {
-        const role = await AsyncStorage.getItem('userRole'); // Fetch role from storage
-        setUserRole(role);
+        try {
+            const role = await AsyncStorage.getItem('userRole');
+            setUserRole(role);
+        } catch (error) {
+            console.error("Error loading user role:", error);
+        }
     };
 
     const getAllResources = async () => {
@@ -42,13 +46,26 @@ const ResourceScreen = ({ navigation }) => {
     };
 
     const loadTestHistory = async () => {
-        const history = await getTestHistory();
-        setTestHistory(history);
+        try {
+            const history = await getTestHistory();
+            console.log("Full Test History:", history);
+
+            let storedUserRole = await AsyncStorage.getItem('userRole');
+            storedUserRole = storedUserRole ? storedUserRole.replace(/^"|"$/g, '') : null;
+
+            const filteredHistory = history.filter(item => item.userRole === storedUserRole);
+            console.log(`Filtered History for Role: ${storedUserRole}`, filteredHistory);
+
+            setTestHistory(filteredHistory);
+        } catch (error) {
+            console.error("Error loading test history:", error);
+        }
     };
+
 
     const handleClearHistory = async () => {
         await clearTestHistory();
-        setTestHistory([]); 
+        setTestHistory([]);
     };
 
     const handleTestSelection = (testId, title) => {
@@ -70,14 +87,13 @@ const ResourceScreen = ({ navigation }) => {
         }
     };
 
-    // Filter resources based on user role
     const filteredResources = resources.filter(resource => resource.targetUser === userRole);
 
     return (
         <View style={{ flex: 1, backgroundColor: '#fff', padding: 10 }}>
             <FlatList
                 ListHeaderComponent={<Text style={styles.sectionHeader}>Available Tests</Text>}
-                data={filteredResources} // Use filtered data
+                data={filteredResources}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity

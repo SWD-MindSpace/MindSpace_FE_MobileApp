@@ -3,7 +3,7 @@ import {
     StyleSheet, Text, View, Image, TouchableOpacity, Linking, ActivityIndicator, Button
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { getAuthToken } from "@/app/src/utils/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import CONFIG from '@/app/src/config/config';
 
 const SPDetailScreen = ({ route }) => {
@@ -11,12 +11,32 @@ const SPDetailScreen = ({ route }) => {
     const [program, setProgram] = useState(null);
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [token, setToken] = useState(null);
     const navigation = useNavigation();
 
     const programApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs/${programId}`;
     const profileApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/profile`;
 
     useEffect(() => {
+        const fetchToken = async () => {
+            try {
+                const accessToken = await AsyncStorage.getItem("authToken");
+                if (accessToken) {
+                    setToken(accessToken);
+                } else {
+                    console.error("No access token found.");
+                }
+            } catch (error) {
+                console.error("Error retrieving token:", error);
+            }
+        };
+
+        fetchToken();
+    }, []);
+
+    useEffect(() => {
+        if (!token) return;
+
         const fetchProgramDetails = async () => {
             try {
                 const response = await fetch(programApiURL);
@@ -29,14 +49,25 @@ const SPDetailScreen = ({ route }) => {
 
         const fetchUserProfile = async () => {
             try {
-                const accessToken = await getAuthToken();
                 const response = await fetch(profileApiURL, {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${accessToken}`,
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${token}`,
                     },
                 });
+
+                if (response.status === 401) {
+                    console.error("Unauthorized! Token might be expired or invalid.");
+                    return;
+                }
+
+                if (!response.ok) {
+                    console.error(`Error: ${response.status} ${response.statusText}`);
+                    return;
+                }
+
                 const profile = await response.json();
                 setProfileData(profile);
             } catch (error) {
@@ -45,7 +76,7 @@ const SPDetailScreen = ({ route }) => {
         };
 
         Promise.all([fetchProgramDetails(), fetchUserProfile()]).then(() => setLoading(false));
-    }, []);
+    }, [token]);
 
     if (loading) {
         return (
@@ -76,10 +107,6 @@ const SPDetailScreen = ({ route }) => {
                 <Text style={styles.text}><Text style={styles.label}>Active Status:</Text> {program.isActive ? "Active" : "Inactive"}</Text>
                 <Text style={styles.text}><Text style={styles.label}>Start Date:</Text> {new Date(program.startDateAt).toDateString()}</Text>
             </View>
-
-            <TouchableOpacity style={styles.button} onPress={() => Linking.openURL(program.pdffileUrl)}>
-                <Text style={styles.buttonText}>Download Program PDF</Text>
-            </TouchableOpacity>
 
             <Button
                 title="Sign Up for Program"
@@ -153,4 +180,3 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
 });
-

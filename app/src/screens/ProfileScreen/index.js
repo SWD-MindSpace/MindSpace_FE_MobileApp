@@ -1,15 +1,20 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React, { useEffect, useState } from 'react'
-import { getAuthToken } from '@/app/src/utils/storage'
+import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import CONFIG from '@/app/src/config/config';
+import { jwtDecode } from 'jwt-decode';
 
 const ProfileScreen = () => {
-    const profileApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/profile`
-    const [profileData, setProfileData] = useState(null); 
+    const profileApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/profile`;
+    const [profileData, setProfileData] = useState(null);
 
     const getProfile = async () => {
         try {
-            const accessToken = await getAuthToken();
+            const accessToken = await AsyncStorage.getItem('authToken');
+            if (!accessToken) {
+                throw new Error("No auth token found");
+            }
+            
             const response = await fetch(profileApiURL, {
                 method: "GET",
                 headers: {
@@ -18,14 +23,13 @@ const ProfileScreen = () => {
                 }
             });
 
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
             const jsonData = await response.json();
             console.log("API Response:", jsonData);
-
-            if (jsonData) {
-                setProfileData(jsonData);
-            } else {
-                console.error("No data found in API response.");
-            }
+            setProfileData(jsonData);
         } catch (error) {
             console.error("Error fetching profile data", error);
         }
@@ -47,21 +51,11 @@ const ProfileScreen = () => {
         <View style={styles.container}>
             <Text style={styles.profileHeader}>Your Profile</Text>
             <View style={styles.profileCard}>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Full Name:</Text> {profileData.fullName}
-                </Text>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Email:</Text> {profileData.email}
-                </Text>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Username:</Text> {profileData.userName}
-                </Text>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Date of Birth:</Text> {profileData.dateOfBirth}
-                </Text>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Phone:</Text> {profileData.phoneNumber || "N/A"}
-                </Text>
+                <Text style={styles.profileText}><Text style={styles.label}>Full Name:</Text> {profileData.fullName}</Text>
+                <Text style={styles.profileText}><Text style={styles.label}>Email:</Text> {profileData.email}</Text>
+                <Text style={styles.profileText}><Text style={styles.label}>Username:</Text> {profileData.userName}</Text>
+                <Text style={styles.profileText}><Text style={styles.label}>Date of Birth:</Text> {profileData.dateOfBirth}</Text>
+                <Text style={styles.profileText}><Text style={styles.label}>Phone:</Text> {profileData.phoneNumber || "N/A"}</Text>
             </View>
         </View>
     );

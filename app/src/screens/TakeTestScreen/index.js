@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveTestResult, getTestHistory } from '../../utils/storageHelper';
 
 const TakeTestScreen = ({ route, navigation }) => {
-    const { testId, testCategory, questions, psychologyTestOptions, testScoreRanks } = route.params;
+    const { testId, questions, psychologyTestOptions, testScoreRanks } = route.params;
     const [responses, setResponses] = useState({});
     const [loading, setLoading] = useState(false);
     const [testScore, setTestScore] = useState(null);
@@ -37,24 +37,21 @@ const TakeTestScreen = ({ route, navigation }) => {
 
         setLoading(true);
 
-        if (testCategory === 'Psychological') {
-            let totalScore = Object.values(responses).reduce((sum, res) => sum + res.score, 0);
-            let result = testScoreRanks?.find(rank => totalScore >= rank.minScore && totalScore <= rank.maxScore)?.result || 'No matching score found';
+        let totalScore = Object.values(responses).reduce((sum, res) => sum + res.score, 0);
+        let result = testScoreRanks?.find(rank => totalScore >= rank.minScore && totalScore <= rank.maxScore)?.result || 'Your answer have been saved';
 
-            setTimeout(async () => {
-                setTestScore(totalScore);
-                setTestResult(result);
-                setShowResult(true);
-                setLoading(false);
-
-                await handleSaveTestResult(testId, totalScore, result);
-            }, 1000);
-        } else {
-            await handleSaveTestResult(testId, null, 'Answers Saved');
+        setTimeout(async () => {
+            setTestScore(totalScore);
+            setTestResult(result);
+            setShowResult(true);
             setLoading(false);
-            Alert.alert('Test Saved', 'Your responses have been recorded.');
-            navigation.goBack();
-        }
+
+            // Save test result and refresh history
+            await handleSaveTestResult(testId, totalScore, result);
+
+            // Clear saved responses
+            await AsyncStorage.removeItem(`test_${testId}`);
+        }, 1000);
     };
 
     if (loading) return <ActivityIndicator size="large" color="#007BFF" style={styles.loader} />;
@@ -93,15 +90,15 @@ const TakeTestScreen = ({ route, navigation }) => {
                                             styles.optionContainer,
                                             responses[question.id]?.optionId === option.id && styles.selectedOption
                                         ]}
-                                        onPress={() => handleOptionSelect(question.id, option.id, 0)}
+                                        onPress={() => handleOptionSelect(question.id, option.id, option.score)}
                                     >
                                         <RadioButton
                                             value={option.id}
                                             status={responses[question.id]?.optionId === option.id ? 'checked' : 'unchecked'}
-                                            onPress={() => handleOptionSelect(question.id, option.id, 0)}
+                                            onPress={() => handleOptionSelect(question.id, option.id, option.score)}
                                             color="#007BFF"
                                         />
-                                        <Text style={styles.optionText}>{option.displayedText} (0 pts)</Text>
+                                        <Text style={styles.optionText}>{option.displayedText} </Text>
                                     </TouchableOpacity>
                                 ))}
                         </View>

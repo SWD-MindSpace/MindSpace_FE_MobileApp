@@ -7,15 +7,25 @@ export const saveTestResult = async (testId, totalScore, result, timestamp) => {
         const existingHistory = await AsyncStorage.getItem(TEST_HISTORY_KEY);
         const history = existingHistory ? JSON.parse(existingHistory) : [];
 
-        const newEntry = { testId, totalScore, result, timestamp };
+        let userRole = await AsyncStorage.getItem('userRole');
+        userRole = userRole ? userRole.replace(/^"|"$/g, '') : null;
 
+        if (!userRole) {
+            console.error("No userRole found in AsyncStorage! Test history will not be filtered.");
+            return;
+        }
+
+        const newEntry = { testId, totalScore, result, timestamp, userRole }; 
         history.push(newEntry);
 
         await AsyncStorage.setItem(TEST_HISTORY_KEY, JSON.stringify(history));
+
+        console.log("Test history saved:", history);
     } catch (error) {
         console.error("Error saving test result:", error);
     }
 };
+
 
 export const getTestHistory = async () => {
     try {
@@ -30,11 +40,11 @@ export const getTestHistory = async () => {
 export const clearTestHistory = async () => {
     try {
         await AsyncStorage.removeItem(TEST_HISTORY_KEY);
+        console.log("Test history cleared!");
     } catch (error) {
         console.error("Error clearing test history:", error);
     }
 };
-
 
 
 const StorageHelper = {
