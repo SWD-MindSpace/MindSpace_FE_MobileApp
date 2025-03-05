@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useEffect, useState, useCallback } from 'react';
 import { FlatList, Text, View, TouchableOpacity, Pressable, Alert } from 'react-native';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
-import { getTestHistory, clearTestHistory, saveTestResult } from '@/app/src/utils/storageHelper';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getTestHistory, clearTestHistory } from '@/app/src/utils/storageHelper';
 import CONFIG from '@/app/src/config/config';
 import moment from 'moment';
 
@@ -9,11 +11,23 @@ const ResourceScreen = ({ navigation }) => {
     const resourceApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/tests`;
     const [resources, setResources] = useState([]);
     const [testHistory, setTestHistory] = useState([]);
+    const [userRole, setUserRole] = useState(null);
 
     useEffect(() => {
+        loadUserRole();
         getAllResources();
-        loadTestHistory();
     }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadTestHistory(); // Refresh test history when screen is focused
+        }, [])
+    );
+
+    const loadUserRole = async () => {
+        const role = await AsyncStorage.getItem('userRole'); // Fetch role from storage
+        setUserRole(role);
+    };
 
     const getAllResources = async () => {
         try {
@@ -34,7 +48,7 @@ const ResourceScreen = ({ navigation }) => {
 
     const handleClearHistory = async () => {
         await clearTestHistory();
-        setTestHistory([]);
+        setTestHistory([]); 
     };
 
     const handleTestSelection = (testId, title) => {
@@ -56,20 +70,14 @@ const ResourceScreen = ({ navigation }) => {
         }
     };
 
-    const handleSaveTestResult = async (testId, score, result) => {
-        const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
-        const updatedHistory = testHistory.filter((test) => test.testId !== testId);
-        const newEntry = { testId, totalScore: score, result, timestamp };
-        updatedHistory.push(newEntry);
-        setTestHistory(updatedHistory);
-        await saveTestResult(testId, score, result, timestamp);
-    };
+    // Filter resources based on user role
+    const filteredResources = resources.filter(resource => resource.targetUser === userRole);
 
     return (
         <View style={{ flex: 1, backgroundColor: '#fff', padding: 10 }}>
             <FlatList
                 ListHeaderComponent={<Text style={styles.sectionHeader}>Available Tests</Text>}
-                data={resources}
+                data={filteredResources} // Use filtered data
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity

@@ -9,13 +9,11 @@ const TestHistoryScreen = ({ navigation }) => {
         loadResults();
     }, []);
 
-    // ✅ Load test history
     const loadResults = async () => {
         const results = await getTestHistory();
         setTestResults(results);
     };
 
-    // ✅ Clear test history and refresh UI
     const handleClearHistory = async () => {
         await clearTestHistory();
         setTestResults([]);

@@ -1,31 +1,32 @@
 import { useState } from 'react';
-import { Alert, Button, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Button, ScrollView, StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { RadioButton } from 'react-native-paper';
-import CONFIG from '@/app/src/config/config';
+import moment from 'moment';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { saveTestResult, getTestHistory } from '../../utils/storageHelper';
 
 const TakeTestScreen = ({ route, navigation }) => {
-    const { testId, questions, psychologyTestOptions, testScoreRanks } = route.params;
+    const { testId, testCategory, questions, psychologyTestOptions, testScoreRanks } = route.params;
     const [responses, setResponses] = useState({});
     const [loading, setLoading] = useState(false);
     const [testScore, setTestScore] = useState(null);
     const [testResult, setTestResult] = useState(null);
+    const [showResult, setShowResult] = useState(false);
+    const [testHistory, setTestHistory] = useState([]);
+
+    const handleSaveTestResult = async (testId, score, result) => {
+        const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
+
+        // Save the result in AsyncStorage
+        await saveTestResult(testId, score, result, timestamp);
+
+        // Reload history after saving
+        const updatedHistory = await getTestHistory();
+        setTestHistory(updatedHistory);
+    };
 
     const handleOptionSelect = (questionId, optionId, score) => {
         setResponses({ ...responses, [questionId]: { optionId, score } });
-    };
-
-    const saveTestResult = async (testId, totalScore, result, testResponseItems) => {
-        try {
-            const newResult = { testId, totalScore, result, testResponseItems };
-            const storedResults = await AsyncStorage.getItem('testResults');
-            let testResults = storedResults ? JSON.parse(storedResults) : [];
-            testResults.push(newResult);
-            await AsyncStorage.setItem('testResults', JSON.stringify(testResults));
-            console.log("Test result saved successfully!");
-        } catch (error) {
-            console.error("Error saving test result:", error);
-        }
     };
 
     const handleSubmit = async () => {
@@ -36,92 +37,91 @@ const TakeTestScreen = ({ route, navigation }) => {
 
         setLoading(true);
 
-        try {
-            let totalScore = 0;
-            let result = null;
-            let testResponseItems = [];
+        if (testCategory === 'Psychological') {
+            let totalScore = Object.values(responses).reduce((sum, res) => sum + res.score, 0);
+            let result = testScoreRanks?.find(rank => totalScore >= rank.minScore && totalScore <= rank.maxScore)?.result || 'No matching score found';
 
-            if (psychologyTestOptions.length > 0) {
-                totalScore = Object.values(responses).reduce((sum, res) => sum + res.score, 0);
+            setTimeout(async () => {
                 setTestScore(totalScore);
-
-                if (testScoreRanks?.length > 0) {
-                    result = testScoreRanks.find(
-                        (rank) => totalScore >= rank.minScore && totalScore <= rank.maxScore
-                    )?.result || 'No matching score range found';
-                }
                 setTestResult(result);
-            } else {
-                const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/testresponses`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        testId,
-                        responses: Object.entries(responses).map(([questionId, data]) => ({
-                            questionId: parseInt(questionId),
-                            optionId: data.optionId,
-                        })),
-                    }),
-                });
+                setShowResult(true);
+                setLoading(false);
 
-                const text = await response.text();
-                if (!response.ok) throw new Error(`Submission failed: ${response.status} - ${text}`);
-
-                if (text.trim()) {
-                    const data = JSON.parse(text);
-                    totalScore = data.totalScore;
-                    setTestScore(totalScore);
-                    testResponseItems = data.testResponseItems;
-                } else {
-                    throw new Error('Empty response from server');
-                }
-            }
-
-            saveTestResult(testId, totalScore, result, testResponseItems);
-
-            navigation.navigate('ResourceResultScreen', { testId, score: totalScore, result });
-
-        } catch (error) {
-            console.error('Error:', error.message);
-            Alert.alert('Submission Failed', error.message);
-        } finally {
+                await handleSaveTestResult(testId, totalScore, result);
+            }, 1000);
+        } else {
+            await handleSaveTestResult(testId, null, 'Answers Saved');
             setLoading(false);
+            Alert.alert('Test Saved', 'Your responses have been recorded.');
+            navigation.goBack();
         }
     };
 
+    if (loading) return <ActivityIndicator size="large" color="#007BFF" style={styles.loader} />;
+
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.header}>Take Test</Text>
-
-            {questions.map((question) => (
-                <View key={question.id} style={styles.questionContainer}>
-                    <Text style={styles.questionText}>{question.content}</Text>
-
-                    {psychologyTestOptions.length > 0
-                        ? psychologyTestOptions.map((option) => (
-                            <View key={option.id} style={styles.optionContainer}>
-                                <RadioButton
-                                    value={option.id}
-                                    status={responses[question.id]?.optionId === option.id ? 'checked' : 'unchecked'}
-                                    onPress={() => handleOptionSelect(question.id, option.id, option.score)}
-                                />
-                                <Text>{option.displayedText}</Text>
-                            </View>
-                        ))
-                        : question.questionOptions.map((option) => (
-                            <View key={option.id} style={styles.optionContainer}>
-                                <RadioButton
-                                    value={option.id}
-                                    status={responses[question.id]?.optionId === option.id ? 'checked' : 'unchecked'}
-                                    onPress={() => handleOptionSelect(question.id, option.id, 0)}
-                                />
-                                <Text>{option.displayedText}</Text>
-                            </View>
-                        ))}
-                </View>
-            ))}
-
-            <Button title="Submit" onPress={handleSubmit} disabled={loading} color="#007BFF" />
+            {!showResult ? (
+                <>
+                    <Text style={styles.header}>Take Test</Text>
+                    {questions.map((question) => (
+                        <View key={question.id} style={styles.questionContainer}>
+                            <Text style={styles.questionText}>{question.content}</Text>
+                            {psychologyTestOptions.length > 0
+                                ? psychologyTestOptions.map((option) => (
+                                    <TouchableOpacity
+                                        key={option.id}
+                                        style={[
+                                            styles.optionContainer,
+                                            responses[question.id]?.optionId === option.id && styles.selectedOption
+                                        ]}
+                                        onPress={() => handleOptionSelect(question.id, option.id, option.score)}
+                                    >
+                                        <RadioButton
+                                            value={option.id}
+                                            status={responses[question.id]?.optionId === option.id ? 'checked' : 'unchecked'}
+                                            onPress={() => handleOptionSelect(question.id, option.id, option.score)}
+                                            color="#007BFF"
+                                        />
+                                        <Text style={styles.optionText}>{option.displayedText} </Text>
+                                    </TouchableOpacity>
+                                ))
+                                : question.questionOptions.map((option) => (
+                                    <TouchableOpacity
+                                        key={option.id}
+                                        style={[
+                                            styles.optionContainer,
+                                            responses[question.id]?.optionId === option.id && styles.selectedOption
+                                        ]}
+                                        onPress={() => handleOptionSelect(question.id, option.id, 0)}
+                                    >
+                                        <RadioButton
+                                            value={option.id}
+                                            status={responses[question.id]?.optionId === option.id ? 'checked' : 'unchecked'}
+                                            onPress={() => handleOptionSelect(question.id, option.id, 0)}
+                                            color="#007BFF"
+                                        />
+                                        <Text style={styles.optionText}>{option.displayedText} (0 pts)</Text>
+                                    </TouchableOpacity>
+                                ))}
+                        </View>
+                    ))}
+                    <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                        <Text style={styles.submitButtonText}>Submit</Text>
+                    </TouchableOpacity>
+                </>
+            ) : (
+                <>
+                    <Text style={styles.header}>Test Results</Text>
+                    <View style={styles.resultContainer}>
+                        <Text style={styles.resultText}>Total Score: {testScore}</Text>
+                        <Text style={styles.resultText}>Result: {testResult}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.homeButton} onPress={() => navigation.navigate('MainScreen', { screen: 'Resource' })}>
+                        <Text style={styles.homeButtonText}>Back to Test Screen</Text>
+                    </TouchableOpacity>
+                </>
+            )}
         </ScrollView>
     );
 };
@@ -129,8 +129,25 @@ const TakeTestScreen = ({ route, navigation }) => {
 export default TakeTestScreen;
 
 const styles = StyleSheet.create({
-    container: { flexGrow: 1, padding: 20 },
-    header: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-    questionContainer: { marginBottom: 20, padding: 10, backgroundColor: '#f8f9fa', borderRadius: 8 },
-    optionContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
+    container: { flexGrow: 1, padding: 20, backgroundColor: '#F0F5FF' },
+    loader: { marginTop: 50 },
+    header: { fontSize: 26, fontWeight: 'bold', color: '#007BFF', marginBottom: 20, textAlign: 'center' },
+    questionContainer: {
+        marginBottom: 20,
+        padding: 15,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        shadowOpacity: 0.1,
+        elevation: 3
+    },
+    questionText: { fontSize: 18, fontWeight: '600', color: '#333', marginBottom: 10 },
+    optionContainer: { flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8 },
+    optionText: { fontSize: 16, color: '#333' },
+    selectedOption: { backgroundColor: '#D0E5FF' },
+    submitButton: { backgroundColor: '#007BFF', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
+    submitButtonText: { fontSize: 18, fontWeight: 'bold', color: 'white' },
+    resultContainer: { padding: 20, backgroundColor: 'white', borderRadius: 10, elevation: 3, marginBottom: 20 },
+    resultText: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', color: '#007BFF' },
+    homeButton: { backgroundColor: '#DC3545', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
+    homeButtonText: { fontSize: 18, fontWeight: 'bold', color: 'white' }
 });

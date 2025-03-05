@@ -1,42 +1,40 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ✅ Save test results
-export const saveTestResult = async (testId, score, result) => {
+const TEST_HISTORY_KEY = 'test_history';
+
+export const saveTestResult = async (testId, totalScore, result, timestamp) => {
     try {
-        const existingResults = await AsyncStorage.getItem('testResults');
-        const parsedResults = existingResults ? JSON.parse(existingResults) : [];
+        const existingHistory = await AsyncStorage.getItem(TEST_HISTORY_KEY);
+        const history = existingHistory ? JSON.parse(existingHistory) : [];
 
-        const newResult = { testId, score, result }; // ✅ Ensure score is included
-        parsedResults.push(newResult);
+        const newEntry = { testId, totalScore, result, timestamp };
 
-        await AsyncStorage.setItem('testResults', JSON.stringify(parsedResults));
+        history.push(newEntry);
+
+        await AsyncStorage.setItem(TEST_HISTORY_KEY, JSON.stringify(history));
     } catch (error) {
         console.error("Error saving test result:", error);
     }
 };
 
-
-// ✅ Get all test results
-
 export const getTestHistory = async () => {
     try {
-        const storedHistory = await AsyncStorage.getItem('testResults');
-        return storedHistory ? JSON.parse(storedHistory) : []; // ✅ Return an array, not null
+        const history = await AsyncStorage.getItem(TEST_HISTORY_KEY);
+        return history ? JSON.parse(history) : [];
     } catch (error) {
-        console.error("Error retrieving test history:", error);
+        console.error("Error loading test history:", error);
         return [];
     }
 };
 
-
-// ✅ Clear test history
 export const clearTestHistory = async () => {
     try {
-        await AsyncStorage.removeItem('testResults');
+        await AsyncStorage.removeItem(TEST_HISTORY_KEY);
     } catch (error) {
         console.error("Error clearing test history:", error);
     }
 };
+
 
 
 const StorageHelper = {

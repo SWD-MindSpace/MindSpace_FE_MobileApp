@@ -1,7 +1,6 @@
 import { Image, FlatList, StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import CONFIG from '@/app/src/config/config';
-
 const { width } = Dimensions.get('window');
 
 const MainScreen = ({ navigation }) => {
