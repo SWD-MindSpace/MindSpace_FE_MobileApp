@@ -1,3 +1,6 @@
+// global.XMLHttpRequest = global.originalXMLHttpRequest || global.XMLHttpRequest;
+
+
 import { StyleSheet, View } from 'react-native'
 import React from 'react'
 import AppNavigator from '@/app/src/navigation/AppNavigator';

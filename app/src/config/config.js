@@ -1,11 +1,4 @@
-const CONFIG = {
-    baseUrl: "http://192.168.101.2:5021/api",
-    // baseURL: "https://10.0.2.2:7096/api",
+export default CONFIG = {
+    baseUrl: "https://5b2c-171-243-48-137.ngrok-free.app/api",
     apiVersion: "v1",
-    // httpsAgent: new https.Agent({
-    //     ca: readFileSync(join(__dirname, "assets/certs/localhost.pem")),
-    // })
-};
-
-
-export default CONFIG;
+}

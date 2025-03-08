@@ -1,18 +1,18 @@
-import { Alert, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import React, { useState } from 'react';
-import { saveAuthToken } from '@/app/src/utils/storage';
+import { Alert, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import CONFIG from '@/app/src/config/config';
+import { jwtDecode } from 'jwt-decode';
 
 const LoginScreen = ({ navigation }) => {
     const apiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/login`;
-    
+
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
 
     const handleLogin = async () => {
         try {
-            console.log("API URL:", apiURL);
 
             const response = await fetch(apiURL, {
                 method: "POST",
@@ -25,23 +25,53 @@ const LoginScreen = ({ navigation }) => {
                 }),
             });
 
-            const data = await response.json();
+            const text = await response.text();
+
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                throw new Error(`Invalid JSON response: ${text}`);
+            }
+
             if (!response.ok) {
-                console.log('something wrong')
                 throw new Error(`Login failed: ${response.status} - ${data.message || "Invalid request"}`);
             }
 
             if (data.access_token) {
-                await saveAuthToken(data.access_token);
-                console.log("Token saved successfully!");
-            }
+                const decodedToken = jwtDecode(data.access_token);
+                const userRole = decodedToken.role || decodedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
 
-            navigation.navigate('MainScreen');
+                if (!userRole) {
+                    throw new Error("Role not found in token");
+                }
+
+                console.log("Decoded user role:", userRole);
+
+                await AsyncStorage.setItem('authToken', data.access_token);
+                await AsyncStorage.setItem('userRole', userRole);
+                console.log("Token and role saved successfully!");
+
+                const storedRole = await AsyncStorage.getItem('userRole');
+                console.log("Stored role in AsyncStorage:", storedRole);
+
+                // Navigate based on role
+                switch (userRole.toLowerCase()) {
+                    case "student":
+                    case "parent":
+                    case "psychologist":
+                        navigation.navigate('MainScreen');
+                        break;
+                    default:
+                        throw new Error("Unknown role received");
+                }
+            }
         } catch (error) {
             console.log("Error:", error.message);
             Alert.alert("Login Failed", error.message);
         }
     };
+
 
     return (
         <View style={styles.container}>
@@ -68,7 +98,6 @@ const LoginScreen = ({ navigation }) => {
                         <View style={[styles.checkbox, rememberMe && styles.checkedBox]} />
                         <Text style={styles.rememberMeText}>Remember Me</Text>
                     </Pressable>
-
                     <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                         <Text style={styles.forgotPassword}>Forgot Password?</Text>
                     </TouchableOpacity>

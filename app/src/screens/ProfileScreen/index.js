@@ -1,15 +1,21 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React, { useEffect, useState } from 'react'
-import { getAuthToken } from '@/app/src/utils/storage'
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, ActivityIndicator, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import CONFIG from '@/app/src/config/config';
+import { Avatar } from 'react-native-paper';
 
 const ProfileScreen = () => {
-    const profileApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/profile`
-    const [profileData, setProfileData] = useState(null); 
+    const profileApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/profile`;
+    const [profileData, setProfileData] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     const getProfile = async () => {
         try {
-            const accessToken = await getAuthToken();
+            const accessToken = await AsyncStorage.getItem('authToken');
+            if (!accessToken) {
+                throw new Error("No auth token found");
+            }
+            
             const response = await fetch(profileApiURL, {
                 method: "GET",
                 headers: {
@@ -18,16 +24,16 @@ const ProfileScreen = () => {
                 }
             });
 
-            const jsonData = await response.json();
-            console.log("API Response:", jsonData);
-
-            if (jsonData) {
-                setProfileData(jsonData);
-            } else {
-                console.error("No data found in API response.");
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
             }
+
+            const jsonData = await response.json();
+            setProfileData(jsonData);
         } catch (error) {
             console.error("Error fetching profile data", error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -35,44 +41,47 @@ const ProfileScreen = () => {
         getProfile();
     }, []);
 
-    if (!profileData) {
+    if (loading) {
         return (
             <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007BFF" />
                 <Text style={styles.loadingText}>Loading Profile...</Text>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.profileHeader}>Your Profile</Text>
+        <ScrollView contentContainerStyle={styles.container}>
+            <Avatar.Image 
+                size={100} 
+                source={{ uri: 'https://via.placeholder.com/100' }} 
+                style={styles.avatar}
+            />
+            <Text style={styles.profileHeader}>{profileData.fullName}</Text>
+            <Text style={styles.profileSubtext}>{profileData.email}</Text>
+
             <View style={styles.profileCard}>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Full Name:</Text> {profileData.fullName}
-                </Text>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Email:</Text> {profileData.email}
-                </Text>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Username:</Text> {profileData.userName}
-                </Text>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Date of Birth:</Text> {profileData.dateOfBirth}
-                </Text>
-                <Text style={styles.profileText}>
-                    <Text style={styles.label}>Phone:</Text> {profileData.phoneNumber || "N/A"}
-                </Text>
+                <ProfileDetail label="Username" value={profileData.userName} />
+                <ProfileDetail label="Date of Birth" value={profileData.dateOfBirth} />
+                <ProfileDetail label="Phone" value={profileData.phoneNumber || "N/A"} />
             </View>
-        </View>
+        </ScrollView>
     );
 };
+
+const ProfileDetail = ({ label, value }) => (
+    <View style={styles.detailRow}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.value}>{value}</Text>
+    </View>
+);
 
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: '#f4f4f4',
+        flexGrow: 1,
+        backgroundColor: '#F0F5FF',
         padding: 20,
         alignItems: 'center',
     },
@@ -82,35 +91,51 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 16,
+        marginTop: 10,
         color: '#555',
+    },
+    avatar: {
+        marginBottom: 15,
     },
     profileHeader: {
         fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 20,
+        color: '#007BFF',
         textAlign: 'center',
-        color: '#333',
+    },
+    profileSubtext: {
+        fontSize: 16,
+        color: '#555',
+        marginBottom: 15,
+        textAlign: 'center',
     },
     profileCard: {
-        backgroundColor: '#fff',
+        backgroundColor: 'white',
         width: '100%',
         padding: 20,
-        borderRadius: 10,
+        borderRadius: 12,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 5,
         elevation: 5,
+        marginTop: 10,
     },
-    profileText: {
-        fontSize: 18,
-        color: '#555',
-        marginBottom: 10,
+    detailRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
     },
     label: {
+        fontSize: 16,
         fontWeight: 'bold',
-        color: '#000',
+        color: '#444',
+    },
+    value: {
+        fontSize: 16,
+        color: '#007BFF',
     },
 });

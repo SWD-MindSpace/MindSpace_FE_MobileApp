@@ -1,6 +1,6 @@
+import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, { useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AppWelcomeLogo from '@/app/src/screens/AppWelcomeLogo';
@@ -11,9 +11,8 @@ import ResourceScreen from '../screens/ResourceScreen';
 import ServiceScreen from '../screens/ServiceScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import LoginScreen from '@/app/src/screens/LoginScreen';
-import { getAuthToken, removeAuthToken } from '@/app/src/utils/storage';
 import { useNavigation } from '@react-navigation/native';
-import BlogDetail from '@/app/src/screens/BlogDetail'
+import BlogDetail from '@/app/src/screens/BlogDetail';
 import ResourceDetailScreen from '../screens/ResourceDetailScreen';
 import SPDetailScreen from '../screens/SPDetailScreen';
 import SignUpSPScreen from '../screens/SignUpSPScreen';
@@ -21,6 +20,8 @@ import ArticleDetail from '../screens/ArticleDetail';
 import TakeTestScreen from '@/app/src/screens/TakeTestScreen';
 import ResourceResultScreen from '@/app/src/screens/ResourceResultScreen';
 import TestHistoryScreen from '@/app/src/screens/TestHistoryScreen';
+import CONFIG from '../config/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 function MainTabs() {
     const Tab = createBottomTabNavigator();
@@ -48,26 +49,26 @@ function MainTabs() {
     );
 }
 
-export default function AppNavigator() {
+function AppNavigator() {
     const Stack = createNativeStackNavigator();
     const navigation = useNavigation();
     const [menuVisible, setMenuVisible] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
 
-    const apiURL = "http://192.168.101.2:5021/api/v1/identity/logout";
+    const apiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/logout`;
 
-
-    const handleSignOut = async () => {
+    const handleSignOut = async (navigation) => {
         try {
-            const token = await getAuthToken();
+            const token = await AsyncStorage.getItem('authToken');
+
             if (!token) {
-                console.error("No auth token found, redirecting to login.");
-                navigation.navigate("LoginScreen");
+                console.warn("No auth token found, redirecting to login.");
+                await AsyncStorage.removeItem('userRole');
+                navigation.replace("LoginScreen");
                 return;
             }
 
-            console.log("Token retrieved:", token);
-
+            console.log("Logging out with token:", token);
             const response = await fetch(apiURL, {
                 method: "POST",
                 headers: {
@@ -76,19 +77,24 @@ export default function AppNavigator() {
                 },
             });
 
-            console.log("Response Status:", response.status);
-
             if (response.ok) {
+                console.log("Logout successful.");
+                await AsyncStorage.removeItem('authToken');
+                await AsyncStorage.removeItem('userRole');
                 setMenuVisible(false);
-                console.log("Logout successful");
-                await removeAuthToken();
                 navigation.navigate("LoginScreen");
             } else {
-                const errorText = await response.text();
-                console.error("Logout failed:", response.status, errorText);
+                console.warn("Logout failed:", response.status);
+                if (response.status === 401) {
+                    console.warn("Token might be expired. Removing token and redirecting.");
+                    await AsyncStorage.removeItem('authToken');
+                    await AsyncStorage.removeItem('userRole');
+                    navigation.replace("LoginScreen");
+                }
             }
         } catch (error) {
             console.error("Error during logout:", error);
+            Alert.alert("Logout Failed", "Something went wrong. Please try again.");
         }
     };
 
@@ -96,10 +102,10 @@ export default function AppNavigator() {
     return (
         <>
             <Stack.Navigator>
-                <Stack.Screen name='AppWelcomeLogo' component={AppWelcomeLogo} options={{ headerShown: false }} />
-                <Stack.Screen name='LoginScreen' component={LoginScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="AppWelcomeLogo" component={AppWelcomeLogo} options={{ headerShown: false }} />
+                <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }} />
                 <Stack.Screen
-                    name='MainScreen'
+                    name="MainScreen"
                     component={MainTabs}
                     options={{
                         title: "MindSpace",
@@ -118,16 +124,16 @@ export default function AppNavigator() {
                         ),
                     }}
                 />
-                <Stack.Screen name='ResourceDetailScreen' component={ResourceDetailScreen} />
-                <Stack.Screen name='TakeTestScreen' component={TakeTestScreen} />
-                <Stack.Screen name='ResourceResultScreen' component={ResourceResultScreen} />
-                <Stack.Screen name='BlogDetail' component={BlogDetail} />
-                <Stack.Screen name='ArticleDetail' component={ArticleDetail} />
-                <Stack.Screen name="TestHistoryScreen" component={TestHistoryScreen} />
-                <Stack.Screen name='SPDetailScreen' component={SPDetailScreen} />
-                <Stack.Screen name='SignUpSPScreen' component={SignUpSPScreen} />
-                <Stack.Screen name='ForgotPassword' component={ForgotPassword} />
-                <Stack.Screen name='VerifiedMail' component={VerifiedMail} />
+                <Stack.Screen name="ResourceDetailScreen" component={ResourceDetailScreen} />
+                <Stack.Screen name="TakeTestScreen" component={TakeTestScreen} />
+                <Stack.Screen name="ResourceResultScreen" component={ResourceResultScreen} />
+                <Stack.Screen name="BlogDetail" component={BlogDetail} />
+                <Stack.Screen name="ArticleDetail" component={ArticleDetail} />
+                <Stack.Screen name="TestHistory" component={TestHistoryScreen} />
+                <Stack.Screen name="SPDetailScreen" component={SPDetailScreen} />
+                <Stack.Screen name="SignUpSPScreen" component={SignUpSPScreen} />
+                <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+                <Stack.Screen name="VerifiedMail" component={VerifiedMail} />
             </Stack.Navigator>
 
             {/* Dropdown Menu Modal */}
@@ -138,15 +144,12 @@ export default function AppNavigator() {
                             style={styles.dropdownItem}
                             onPress={() => {
                                 setMenuVisible(false);
-                                navigation.navigate('ProfileScreen');
+                                navigation.navigate("ProfileScreen");
                             }}
                         >
                             <Text style={styles.dropdownText}>See Profile</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.dropdownItem}
-                            onPress={() => handleSignOut()}
-                        >
+                        <TouchableOpacity style={styles.dropdownItem} onPress={() => handleSignOut(navigation)}>
                             <Text style={styles.dropdownText}>Sign Out</Text>
                         </TouchableOpacity>
                     </View>
@@ -156,44 +159,46 @@ export default function AppNavigator() {
     );
 }
 
+export default AppNavigator
+
 const styles = StyleSheet.create({
     header: {
-        backgroundColor: '#007AFF',
-        shadowColor: '#000',
+        backgroundColor: "#007AFF",
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 5,
     },
     headerTitle: {
-        color: 'white',
+        color: "white",
         fontSize: 22,
-        fontWeight: 'bold',
+        fontWeight: "bold",
     },
     menuButton: {
         width: 37,
-        alignItems: 'center',
+        alignItems: "center",
         padding: 5,
         borderRadius: 5,
     },
     menuButtonActive: {
-        backgroundColor: 'lightgray',
+        backgroundColor: "lightgray",
     },
     menuText: {
         fontSize: 22,
-        fontWeight: 'bold',
-        color: 'white',
+        fontWeight: "bold",
+        color: "white",
     },
     overlay: {
         flex: 1,
-        justifyContent: 'flex-start',
-        alignItems: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        justifyContent: "flex-start",
+        alignItems: "flex-end",
+        backgroundColor: "rgba(0,0,0,0.3)",
         paddingTop: 60,
         paddingRight: 15,
     },
     dropdownMenu: {
-        backgroundColor: 'white',
+        backgroundColor: "white",
         width: 150,
         borderRadius: 8,
         elevation: 5,
@@ -202,9 +207,10 @@ const styles = StyleSheet.create({
     dropdownItem: {
         padding: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
+        borderBottomColor: "#ddd",
     },
     dropdownText: {
         fontSize: 16,
     },
 });
+

@@ -4,7 +4,7 @@ import CONFIG from '@/app/src/config/config';
 import React from 'react';
 
 const ResourceDetailScreen = ({ route, navigation }) => {
-    const { testId } = route.params;
+    const { testId, testCategory } = route.params;
     const [testDetails, setTestDetails] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -18,7 +18,6 @@ const ResourceDetailScreen = ({ route, navigation }) => {
                     throw new Error(`Failed to fetch test details: ${response.status} - ${errorText}`);
                 }
 
-                // Check if response contains JSON
                 const contentType = response.headers.get("content-type");
                 if (!contentType || !contentType.includes("application/json")) {
                     throw new Error("Invalid response format: Expected JSON.");
@@ -53,6 +52,10 @@ const ResourceDetailScreen = ({ route, navigation }) => {
         );
     }
 
+    // Check test type
+    const isPsychologicalTest = testDetails.type === 'psychological';
+    const isPeriodicTest = testDetails.type === 'periodic';
+
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.header}>{testDetails.title}</Text>
@@ -60,12 +63,21 @@ const ResourceDetailScreen = ({ route, navigation }) => {
             <Text style={styles.text}>Number of Questions: {testDetails.questionCount}</Text>
             <Text style={styles.text}>Author: {testDetails.author?.fullName || 'Unknown'}</Text>
 
+            {isPsychologicalTest && (
+                <Text style={styles.infoText}>This is a psychological test with structured multiple-choice questions.</Text>
+            )}
+            {isPeriodicTest && (
+                <Text style={styles.infoText}>This is a periodic test with standard question formats.</Text>
+            )}
+
             <Button
                 title="Take Test"
                 onPress={() => navigation.navigate('TakeTestScreen', {
                     testId: testDetails.id,
+                    testName: testDetails.title, 
+                    testCategory,
                     questions: testDetails.questions || [],
-                    psychologyTestOptions: testDetails.psychologyTestOptions || [],
+                    psychologyTestOptions: isPsychologicalTest ? testDetails.psychologyTestOptions || [] : [],
                     testScoreRanks: testDetails.testScoreRanks || [],
                 })}
                 color="#007BFF"
@@ -78,8 +90,9 @@ export default ResourceDetailScreen;
 
 const styles = StyleSheet.create({
     container: { flexGrow: 1, padding: 20, alignItems: 'center' },
-    header: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+    header: { fontSize: 24, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
     text: { fontSize: 16, marginBottom: 10, textAlign: 'center' },
+    infoText: { fontSize: 14, fontWeight: 'bold', color: '#007BFF', marginBottom: 15 },
     errorText: { fontSize: 18, color: 'red', textAlign: 'center' },
     loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

@@ -1,41 +1,43 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Button, ScrollView, StyleSheet, Text, View } from 'react-native';
-import StorageHelper from '@/app/src/utils/storageHelper';
-import React from 'react';
+import CONFIG from '@/app/src/config/config';
 
 const ResourceResultScreen = ({ route, navigation }) => {
     const { testId, score, result } = route.params;
-    const [testResponses, setTestResponses] = useState(null);
+    const [testResponses, setTestResponses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        const fetchStoredResult = async () => {
+        const fetchTestResponses = async () => {
             try {
-                const storedResults = await StorageHelper.getItem('testResults'); // Use StorageHelper
-                if (storedResults) {
-                    const foundResult = storedResults.find(res => res.testId === testId);
-                    if (foundResult) {
-                        setTestResponses(foundResult);
-                    }
+                const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/testresponses?testId=${testId}`);
+                const jsonData = await response.json();
+
+                if (jsonData?.data) {
+                    setTestResponses(jsonData.data);
+                } else {
+                    setError('No responses found.');
                 }
-            } catch (error) {
-                console.log('Error fetching test result:', error);
+            } catch (err) {
+                setError('Failed to load test responses.');
+                console.error('Error fetching test responses:', err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchStoredResult();
+        fetchTestResponses();
     }, [testId]);
 
     if (loading) {
         return <ActivityIndicator size="large" color="#007BFF" />;
     }
 
-    if (!testResponses) {
+    if (error) {
         return (
             <View style={styles.container}>
-                <Text style={styles.errorText}>Failed to load test responses.</Text>
+                <Text style={styles.errorText}>{error}</Text>
             </View>
         );
     }
@@ -46,7 +48,7 @@ const ResourceResultScreen = ({ route, navigation }) => {
             <Text style={styles.text}>Total Score: {score}</Text>
             <Text style={styles.text}>Result: {result}</Text>
 
-            {testResponses?.testResponseItems?.map((item) => (
+            {testResponses.map((item) => (
                 <View key={item.id} style={styles.responseItemContainer}>
                     <Text style={styles.text}>Question: {item.questionContent}</Text>
                     <Text style={styles.text}>Answer: {item.answerText}</Text>
