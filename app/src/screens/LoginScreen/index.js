@@ -4,8 +4,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CONFIG from '@/app/src/config/config';
 import { jwtDecode } from 'jwt-decode';
 
-
-
 const LoginScreen = ({ navigation }) => {
     const apiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/login`;
 

@@ -1,45 +1,49 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, StyleSheet } from 'react-native';
-import { getTestHistory, clearTestHistory } from '@/app/src/utils/storageHelper';
+import { useState, useEffect } from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { getTestHistory, removeTestHistoryItem } from '../../utils/storageHelper';
 
-const TestHistoryScreen = ({ navigation }) => {
-    const [testResults, setTestResults] = useState([]);
+const TestHistoryScreen = () => {
+    const [testHistory, setTestHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadResults();
+        fetchHistory();
     }, []);
 
-    const loadResults = async () => {
-        const results = await getTestHistory();
-        setTestResults(results);
+    const fetchHistory = async () => {
+        setLoading(true);
+        const history = await getTestHistory();
+        setTestHistory(history.slice().reverse());
+        setLoading(false);
     };
 
-    const handleClearHistory = async () => {
-        await clearTestHistory();
-        setTestResults([]);
+    const handleRemove = async (index) => {
+        await removeTestHistoryItem(index);
+        fetchHistory(); m
     };
+
+    if (loading) return <ActivityIndicator size="large" color="#007BFF" style={styles.loader} />;
+    if (testHistory.length === 0) return <Text style={styles.emptyText}>No test history found.</Text>;
 
     return (
         <View style={styles.container}>
             <Text style={styles.header}>Test History</Text>
-            {testResults.length > 0 ? (
-                <FlatList
-                    data={testResults}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={({ item }) => (
-                        <View style={styles.item}>
-                            <Text style={styles.text}>Test ID: {item.testId}</Text>
-                            <Text style={styles.text}>Score: {item.score}</Text>
-                            <Text style={styles.result}>Result: {item.result}</Text>
-                        </View>
-                    )}
-                />
-            ) : (
-                <Text style={styles.text}>No test results found.</Text>
-            )}
+            <FlatList
+                data={testHistory}
+                keyExtractor={(item, index) => `${item.testId}_${index}`} 
+                renderItem={({ item, index }) => (
+                    <View style={styles.historyItem}>
+                        <Text style={styles.testTitle}>Test Name: {item.testName}</Text>
+                        <Text style={styles.testResult}>Result: {item.result}</Text>
+                        <Text style={styles.testScore}>Score: {item.totalScore}</Text>
+                        <Text style={styles.dateTaken}>Date: {item.timestamp}</Text>
 
-            <Button title="Clear History" onPress={handleClearHistory} color="red" />
-            <Button title="Back to Home" onPress={() => navigation.navigate('MainScreen')} color="#007BFF" />
+                        <TouchableOpacity style={styles.removeButton} onPress={() => handleRemove(index)}>
+                            <Text style={styles.removeButtonText}>Remove</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+            />
         </View>
     );
 };
@@ -47,9 +51,22 @@ const TestHistoryScreen = ({ navigation }) => {
 export default TestHistoryScreen;
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, alignItems: 'center' },
-    header: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-    text: { fontSize: 16, marginBottom: 5 },
-    result: { fontSize: 18, fontWeight: 'bold', color: '#28A745' },
-    item: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#ddd', width: '100%' },
+    container: { flex: 1, padding: 20, backgroundColor: '#F0F5FF' },
+    loader: { marginTop: 50 },
+    emptyText: { fontSize: 18, color: '#555', textAlign: 'center', marginTop: 20 },
+    header: { fontSize: 26, fontWeight: 'bold', color: '#007BFF', marginBottom: 20, textAlign: 'center' },
+    historyItem: {
+        backgroundColor: 'white',
+        padding: 15,
+        borderRadius: 10,
+        marginBottom: 10,
+        shadowOpacity: 0.1,
+        elevation: 3
+    },
+    testTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+    testResult: { fontSize: 16, color: '#007BFF', marginTop: 5 },
+    testScore: { fontSize: 16, color: '#28A745', marginTop: 5 },
+    dateTaken: { fontSize: 14, color: '#777', marginTop: 5 },
+    removeButton: { marginTop: 10, padding: 8, backgroundColor: 'red', borderRadius: 5, alignItems: 'center' },
+    removeButtonText: { color: 'white', fontWeight: 'bold' }
 });

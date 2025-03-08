@@ -1,35 +1,46 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const TEST_HISTORY_KEY = 'test_history';
+const TEST_HISTORY_KEY = (role) => `testHistory_${role}`;
 
-export const saveTestResult = async (testId, totalScore, result, timestamp) => {
+/**
+ * Save a test result to AsyncStorage based on user role
+ */
+export const saveTestResult = async (testId, testName, totalScore, result, timestamp) => {
     try {
-        const existingHistory = await AsyncStorage.getItem(TEST_HISTORY_KEY);
-        const history = existingHistory ? JSON.parse(existingHistory) : [];
-
         let userRole = await AsyncStorage.getItem('userRole');
         userRole = userRole ? userRole.replace(/^"|"$/g, '') : null;
 
         if (!userRole) {
-            console.error("No userRole found in AsyncStorage! Test history will not be filtered.");
+            console.error("No userRole found! Test history will not be saved.");
             return;
         }
 
-        const newEntry = { testId, totalScore, result, timestamp, userRole }; 
+        const storageKey = TEST_HISTORY_KEY(userRole);
+        const existingHistory = await AsyncStorage.getItem(storageKey);
+        const history = existingHistory ? JSON.parse(existingHistory) : [];
+
+        const newEntry = { testId, testName, totalScore, result, timestamp };
         history.push(newEntry);
 
-        await AsyncStorage.setItem(TEST_HISTORY_KEY, JSON.stringify(history));
-
-        console.log("Test history saved:", history);
+        await AsyncStorage.setItem(storageKey, JSON.stringify(history));
+        console.log("Test history saved:", newEntry);
     } catch (error) {
         console.error("Error saving test result:", error);
     }
 };
 
-
+/**
+ * Get test history based on user role
+ */
 export const getTestHistory = async () => {
     try {
-        const history = await AsyncStorage.getItem(TEST_HISTORY_KEY);
+        let userRole = await AsyncStorage.getItem('userRole');
+        userRole = userRole ? userRole.replace(/^"|"$/g, '') : null;
+
+        if (!userRole) return [];
+
+        const storageKey = TEST_HISTORY_KEY(userRole);
+        const history = await AsyncStorage.getItem(storageKey);
         return history ? JSON.parse(history) : [];
     } catch (error) {
         console.error("Error loading test history:", error);
@@ -37,42 +48,59 @@ export const getTestHistory = async () => {
     }
 };
 
+/**
+ * Remove a specific test history item
+ */
+export const removeTestHistoryItem = async (index) => {
+    try {
+        let userRole = await AsyncStorage.getItem('userRole');
+        userRole = userRole ? userRole.replace(/^"|"$/g, '') : null;
+
+        if (!userRole) return;
+
+        const storageKey = TEST_HISTORY_KEY(userRole);
+        const history = await getTestHistory();
+
+        if (index < 0 || index >= history.length) {
+            console.error("Invalid index, cannot remove test history item.");
+            return;
+        }
+
+        history.splice(index, 1);
+        await AsyncStorage.setItem(storageKey, JSON.stringify(history));
+        console.log("Test history item removed at index:", index);
+    } catch (error) {
+        console.error("Error removing test history item:", error);
+    }
+};
+
+/**
+ * Clear all test history for the current user role
+ */
 export const clearTestHistory = async () => {
     try {
-        await AsyncStorage.removeItem(TEST_HISTORY_KEY);
-        console.log("Test history cleared!");
+        let userRole = await AsyncStorage.getItem('userRole');
+        userRole = userRole ? userRole.replace(/^"|"$/g, '') : null;
+
+        if (!userRole) return;
+
+        const storageKey = TEST_HISTORY_KEY(userRole);
+        await AsyncStorage.removeItem(storageKey);
+        console.log("Test history cleared for user role:", userRole);
     } catch (error) {
         console.error("Error clearing test history:", error);
     }
 };
 
-
-const StorageHelper = {
-    getItem: async (key) => {
-        try {
-            const value = await AsyncStorage.getItem(key);
-            return value ? JSON.parse(value) : null;
-        } catch (error) {
-            console.error(`Error getting item ${key}:`, error);
-            return null;
-        }
-    },
-
-    setItem: async (key, value) => {
-        try {
-            await AsyncStorage.setItem(key, JSON.stringify(value));
-        } catch (error) {
-            console.error(`Error setting item ${key}:`, error);
-        }
-    },
-
-    removeItem: async (key) => {
-        try {
-            await AsyncStorage.removeItem(key);
-        } catch (error) {
-            console.error(`Error removing item ${key}:`, error);
-        }
+/**
+ * Export test history, filtering out invalid test results
+ */
+export const exportTestHistory = async () => {
+    try {
+        const history = await getTestHistory();
+        return history.filter(item => item.result !== 'Undefined');
+    } catch (error) {
+        console.error("Error exporting test history:", error);
+        return [];
     }
 };
-
-export default StorageHelper;

@@ -129,7 +129,7 @@ function AppNavigator() {
                 <Stack.Screen name="ResourceResultScreen" component={ResourceResultScreen} />
                 <Stack.Screen name="BlogDetail" component={BlogDetail} />
                 <Stack.Screen name="ArticleDetail" component={ArticleDetail} />
-                <Stack.Screen name="TestHistoryScreen" component={TestHistoryScreen} />
+                <Stack.Screen name="TestHistory" component={TestHistoryScreen} />
                 <Stack.Screen name="SPDetailScreen" component={SPDetailScreen} />
                 <Stack.Screen name="SignUpSPScreen" component={SignUpSPScreen} />
                 <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
@@ -158,6 +158,8 @@ function AppNavigator() {
         </>
     );
 }
+
+export default AppNavigator
 
 const styles = StyleSheet.create({
     header: {
@@ -212,4 +214,3 @@ const styles = StyleSheet.create({
     },
 });
 
-export default AppNavigator;

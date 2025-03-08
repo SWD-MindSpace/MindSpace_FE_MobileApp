@@ -1,4 +1,4 @@
-global.XMLHttpRequest = global.originalXMLHttpRequest || global.XMLHttpRequest;
+// global.XMLHttpRequest = global.originalXMLHttpRequest || global.XMLHttpRequest;
 
 
 import { StyleSheet, View } from 'react-native'
