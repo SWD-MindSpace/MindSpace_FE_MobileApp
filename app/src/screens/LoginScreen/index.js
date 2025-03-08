@@ -13,7 +13,6 @@ const LoginScreen = ({ navigation }) => {
 
     const handleLogin = async () => {
         try {
-
             const response = await fetch(apiURL, {
                 method: "POST",
                 headers: {
@@ -40,22 +39,38 @@ const LoginScreen = ({ navigation }) => {
 
             if (data.access_token) {
                 const decodedToken = jwtDecode(data.access_token);
+                console.log("Decoded Token:", decodedToken);
+
+                // Extract role and studentId (or parentId if applicable)
                 const userRole = decodedToken.role || decodedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+                const studentId = decodedToken.sub || decodedToken["http://schemas.example.com/studentId"];
+                const parentId = decodedToken["parentId"] || null; 
 
                 if (!userRole) {
                     throw new Error("Role not found in token");
                 }
 
                 console.log("Decoded user role:", userRole);
+                console.log("Student ID:", studentId);
+                console.log("Parent ID:", parentId);
 
                 await AsyncStorage.setItem('authToken', data.access_token);
                 await AsyncStorage.setItem('userRole', userRole);
-                console.log("Token and role saved successfully!");
+
+                if (studentId) {
+                    await AsyncStorage.setItem('studentId', studentId.toString());
+                    console.log("Student ID saved successfully!");
+                } else if (parentId) {
+                    await AsyncStorage.setItem('parentId', parentId.toString());
+                    console.log("Parent ID saved successfully!");
+                } else {
+                    console.warn("Neither Student ID nor Parent ID found in token!");
+                }
 
                 const storedRole = await AsyncStorage.getItem('userRole');
                 console.log("Stored role in AsyncStorage:", storedRole);
 
-                // Navigate based on role
+
                 switch (userRole.toLowerCase()) {
                     case "student":
                     case "parent":
