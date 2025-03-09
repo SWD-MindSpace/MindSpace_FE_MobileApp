@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { getTestHistory, removeTestHistoryItem } from '../../utils/storageHelper';
+import { getTestHistory, removeTestHistoryItem } from '@/app/Services/Utils/storageHelper';
 
 const TestHistoryScreen = () => {
     const [testHistory, setTestHistory] = useState([]);

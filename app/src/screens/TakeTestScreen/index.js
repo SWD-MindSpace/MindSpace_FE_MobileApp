@@ -1,74 +1,52 @@
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, ActivityIndicator, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { RadioButton } from 'react-native-paper';
 import moment from 'moment';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { saveTestResult, getTestHistory } from '../../utils/storageHelper';
-import CONFIG from '@/app/src/config/config';
+import { saveTestResult } from '@/app/Services/Utils/storageHelper';
+import { fetchTestDetails } from '@/app/Services/Features/Test/testService';
 
 const TakeTestScreen = ({ route, navigation }) => {
     const { testId, testName } = route.params;
     const [testData, setTestData] = useState(null);
-    const [responses, setResponses] = useState({});
     const [loading, setLoading] = useState(true);
-    const [testScore, setTestScore] = useState(null);
+    const [responses, setResponses] = useState({});
 
     useEffect(() => {
-        const fetchTestDetails = async () => {
+        const loadTestDetails = async () => {
             try {
-                const token = await AsyncStorage.getItem('authToken');
-                const response = await fetch(
-                    `${CONFIG.baseUrl}/${CONFIG.apiVersion}/tests/${testId}`, {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                });
-
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-
-                const data = await response.json();
+                const data = await fetchTestDetails(testId);
                 setTestData(data);
             } catch (error) {
-                Alert.alert("Error", `Failed to load test data: ${error.message}`);
+                console.error('Error fetching test details:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        const fetchHistory = async () => {
-            const history = await getTestHistory();
-            setTestHistory(history);
-        };
-
-        fetchTestDetails();
-        fetchHistory();
+        loadTestDetails();
     }, [testId]);
 
     const handleOptionSelect = async (questionId, optionId, score = null) => {
         setResponses(prev => {
             const newResponses = { ...prev, [questionId]: { optionId, score } };
-            // Save selected answers to AsyncStorage
             AsyncStorage.setItem('selectedAnswers', JSON.stringify(newResponses));
             return newResponses;
         });
     };
 
     const handleSubmit = async () => {
-        if (!testData) return;
+        if (!testData || !testData.questions) return;
 
         if (Object.keys(responses).length !== testData.questions.length) {
             Alert.alert('Incomplete Test', 'Please answer all questions before submitting.');
             return;
         }
 
-        setLoading(true);
-
         let totalScore = 0;
         let result = 'Undefined';
 
-        if (testData.testCategory.name === 'Psychological') {
+        if (testData.testCategory?.name === 'Psychological') {
             totalScore = Object.values(responses).reduce((sum, res) => sum + (res.score || 0), 0);
             result = testData.testScoreRanks?.find(rank => totalScore >= rank.minScore && totalScore <= rank.maxScore)?.result || 'Undefined';
         } else {
@@ -85,7 +63,6 @@ const TakeTestScreen = ({ route, navigation }) => {
 
             if (!studentId && !parentId) {
                 Alert.alert("Error", "No Student or Parent ID found. Please re-login.");
-                setLoading(false);
                 return;
             }
 
@@ -95,13 +72,13 @@ const TakeTestScreen = ({ route, navigation }) => {
                 studentId: studentId ? parseInt(studentId) : null,
                 parentId: parentId ? parseInt(parentId) : null,
                 testId,
-                testResponseItems: testData.questions.map((question) => ({
+                testResponseItems: testData.questions?.map((question) => ({
                     questionContent: question.content,
                     score: responses[question.id]?.score || 0,
-                    answerText: (testData.testCategory.name === 'Psychological'
+                    answerText: (testData.testCategory?.name === 'Psychological'
                         ? testData.psychologyTestOptions
                         : question.questionOptions)?.find(opt => opt.id === responses[question.id]?.optionId)?.displayedText || ''
-                }))
+                })) || []
             };
 
             const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/test-responses`, {
@@ -115,8 +92,7 @@ const TakeTestScreen = ({ route, navigation }) => {
 
             if (response.ok) {
                 await saveTestResult(testId, testName, totalScore, result, dateTaken);
-                setTestScore(totalScore);
-                console.log("Test response created successfully")
+                navigation.navigate('ResourceResultScreen', { testId, testName, testScore: totalScore });
             } else {
                 const errorBody = await response.text();
                 throw new Error(`Submission failed. Status: ${response.status}, ${errorBody}`);
@@ -124,23 +100,20 @@ const TakeTestScreen = ({ route, navigation }) => {
 
         } catch (error) {
             Alert.alert("Error", `Failed to submit test: ${error.message}`);
-        } finally {
-            navigation.navigate('ResourceResultScreen', { testId, testName, testScore });
-            setLoading(false);
         }
     };
 
     if (loading) return <ActivityIndicator size="large" color="#007BFF" style={styles.loader} />;
-    if (!testData) return <Text style={styles.errorText}>Test not found</Text>;
+    if (!testData || !testData.questions) return <Text style={styles.errorText}>Test not found or missing questions</Text>;
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.header}>{testData.title}</Text>
             <Text style={styles.description}>{testData.description}</Text>
-            {testData.questions.map((question) => (
+            {testData.questions?.map((question) => (
                 <View key={question.id} style={styles.questionContainer}>
                     <Text style={styles.questionText}>{question.content}</Text>
-                    {(testData.testCategory.name === 'Psychological' ? testData.psychologyTestOptions : question.questionOptions).map((option) => (
+                    {(testData.testCategory?.name === 'Psychological' ? testData.psychologyTestOptions : question.questionOptions)?.map((option) => (
                         <TouchableOpacity
                             key={option.id}
                             style={[styles.optionContainer, responses[question.id]?.optionId === option.id && styles.selectedOption]}

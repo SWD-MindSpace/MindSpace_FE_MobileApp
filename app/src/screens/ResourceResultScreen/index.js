@@ -1,51 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Button, ScrollView, StyleSheet, Text, View } from 'react-native';
-import CONFIG from '@/app/src/config/config';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Card } from 'react-native-paper';
-import { getTestHistory } from '@/app/src/utils/storageHelper';
+import { getTestHistory } from '@/app/Services/Utils/storageHelper';
+import useFetchTestResponse from '@/app/Services/Features/Test/useFetchTestResponse';
 
 const ResourceResultScreen = ({ route, navigation }) => {
     const { testId } = route.params;
     const [testHistory, setTestHistory] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
+    const { testResponses, loading, error } = useFetchTestResponse(testId);
 
     useEffect(() => {
-        const fetchTestHistory = async () => {
+        const fetchData = async () => {
             try {
                 const history = await getTestHistory();
-                setTestHistory(history);
+                setTestHistory(Array.isArray(history) ? history : []);
             } catch (err) {
-                setError('Failed to load test history.');
                 console.error('Error fetching test history:', err);
-            } finally {
-                setLoading(false);
             }
         };
-
-        fetchTestHistory();
-    }, []);
-
-    const [testResponses, setTestResponses] = useState([]);
-    useEffect(() => {
-        const fetchTestResponses = async () => {
-            try {
-                const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/test-responses/${testId}`);
-                if (!response.ok) {
-                    setError('Failed to load test responses.');
-                    return;
-                }
-
-                const data = await response.json();
-                setTestResponses(Array.isArray(data.testResponseItems) ? data.testResponseItems : []);
-            } catch (err) {
-                setError(`Failed to load test responses: ${err.message}`);
-                console.error('Error fetching test responses:', err);
-            }
-        };
-
-        fetchTestResponses();
+        fetchData();
     }, [testId]);
 
     if (loading) {
@@ -60,33 +33,36 @@ const ResourceResultScreen = ({ route, navigation }) => {
         );
     }
 
-
-    const testHistoryEntry = testHistory.find(entry => entry.testId === testId);
+    const testHistoryEntry = testHistory.find(entry => entry.testId === testId) || {};
+    const responseItems = testResponses?.testResponseItems || [];
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.header}>Test Results</Text>
             <Card style={styles.summaryCard}>
-                <Text style={styles.summaryText}>Total Score: <Text style={styles.boldText}>{testHistoryEntry?.totalScore}</Text></Text>
-                <Text style={styles.summaryText}>Result: <Text style={styles.boldText}>{testHistoryEntry?.result}</Text></Text>
+                <Text style={styles.summaryText}>Total Score: <Text style={styles.boldText}>{testHistoryEntry.totalScore ?? 'N/A'}</Text></Text>
+                <Text style={styles.summaryText}>Result: <Text style={styles.boldText}>{testHistoryEntry.result ?? 'N/A'}</Text></Text>
             </Card>
 
-            {testResponses.map((item, index) => (
-                <Card key={index} style={styles.responseCard}>
-                    <Text style={styles.questionText}>Q{index + 1}: {item.questionContent}</Text>
-                    <Text style={styles.answerText}>Your Answer: {item.answerText}</Text>
-                    <Text style={styles.scoreText}>Score: {item.score}</Text>
-                </Card>
-            ))}
+            {responseItems.length > 0 ? (
+                responseItems.map((item, index) => (
+                    <Card key={index} style={styles.responseCard}>
+                        <Text style={styles.questionText}>Q{index + 1}: {item.questionContent}</Text>
+                        <Text style={styles.answerText}>Your Answer: {item.answerText}</Text>
+                        <Text style={styles.scoreText}>Score: {item.score}</Text>
+                    </Card>
+                ))
+            ) : (
+                <Text style={styles.noDataText}>No responses found for this test.</Text>
+            )}
 
-            <Button
-                title="Explore more tests"
+            <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => navigation.navigate('MainScreen', { screen: 'Resource' })}
-            />
-
-
-        </ScrollView>
+            >
+                <Text style={styles.backButtonText}>Explore more tests</Text>
+            </TouchableOpacity>
+        </ScrollView >
     );
 };
 
@@ -103,7 +79,8 @@ const styles = StyleSheet.create({
     questionText: { fontSize: 16, fontWeight: 'bold', color: '#333' },
     answerText: { fontSize: 16, color: '#444', marginTop: 5 },
     scoreText: { fontSize: 16, color: '#28A745', marginTop: 5, fontWeight: 'bold' },
-    optionText: { fontSize: 16, color: '#333', marginTop: 5, fontStyle: 'italic' },
+    noDataText: { fontSize: 16, color: '#888', textAlign: 'center', marginTop: 20 },
     errorText: { fontSize: 18, color: 'red', textAlign: 'center' },
-    backButton: { marginTop: 20, padding: 10, backgroundColor: '#007BFF', borderRadius: 5, alignItems: 'center', width: '100%' }
+    backButton: { marginTop: 20, padding: 15, backgroundColor: '#007BFF', borderRadius: 5, alignItems: 'center', width: '100%' },
+    backButtonText: { fontSize: 18, color: 'white', fontWeight: 'bold' }
 });

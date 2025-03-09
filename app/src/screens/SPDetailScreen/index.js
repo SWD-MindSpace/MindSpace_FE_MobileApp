@@ -1,73 +1,29 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
     StyleSheet, Text, View, Image, ScrollView, ActivityIndicator, TouchableOpacity, Alert
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import CONFIG from '@/app/src/config/config';
+import useProgramDetail from "@/app/Services/Features/SupProgram/useProgramDetail";
 
 const SPDetailScreen = ({ route }) => {
     const { programId } = route.params;
-    const [program, setProgram] = useState(null);
-    const [profileData, setProfileData] = useState(null);
-    const [loading, setLoading] = useState(true);
     const navigation = useNavigation();
-
-    const programApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs/${programId}`;
-    const profileApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/profile`;
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const accessToken = await AsyncStorage.getItem("authToken");
-                if (!accessToken) {
-                    Alert.alert("Error", "Authentication required. Please log in.");
-                    navigation.navigate("LoginScreen");
-                    return;
-                }
-
-                const [programRes, profileRes] = await Promise.all([
-                    fetch(programApiURL),
-                    fetch(profileApiURL, {
-                        method: "GET",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${accessToken}`,
-                        },
-                    })
-                ]);
-
-                if (!programRes.ok) throw new Error("Failed to fetch program details");
-                if (profileRes.status === 401) {
-                    Alert.alert("Session Expired", "Please log in again.");
-                    navigation.navigate("LoginScreen");
-                    return;
-                }
-                if (!profileRes.ok) throw new Error("Failed to fetch profile data");
-
-                const [programData, profileData] = await Promise.all([
-                    programRes.json(),
-                    profileRes.json(),
-                ]);
-
-                setProgram(programData);
-                setProfileData(profileData);
-            } catch (error) {
-                Alert.alert("Error", error.message);
-                console.error("Error fetching data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
+    const { program, profileData, loading, error } = useProgramDetail(programId);
 
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#007AFF" />
                 <Text style={styles.loadingText}>Loading details...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        Alert.alert("Error", error, [{ text: "OK", onPress: () => navigation.goBack() }]);
+        return (
+            <View style={styles.loadingContainer}>
+                <Text style={styles.errorText}>{error}</Text>
             </View>
         );
     }

@@ -16,5 +16,5 @@
     ".expo/types/**/*.jsx",
     "expo-env.d.ts",
     ".expo/types/**/*.ts"
-  ]
+, "app/Services/Configs"  ]
 }

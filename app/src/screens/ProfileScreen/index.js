@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import CONFIG from '@/app/src/config/config';
+import CONFIG from '@/app/Services/Configs/config';
 import { Avatar } from 'react-native-paper';
 
 const ProfileScreen = () => {

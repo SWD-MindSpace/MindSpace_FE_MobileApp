@@ -1,24 +1,24 @@
-import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View, FlatList, Image, TouchableOpacity } from "react-native";
+import React from "react";
+import { StyleSheet, Text, View, FlatList, Image, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import CONFIG from '@/app/src/config/config';
+import usePrograms from "@/app/Services/Features/SupProgram/usePrograms";
 
 const ServiceScreen = () => {
-    const [programs, setPrograms] = useState([]);
     const navigation = useNavigation();
+    const { programs, loading, error } = usePrograms();
 
-    useEffect(() => {
-        fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs`)
-            .then((response) => response.json())
-            .then((data) => setPrograms(data.data))
-            .catch((error) => console.error("Error fetching programs:", error));
-    }, []);
+    if (loading) {
+        return <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />;
+    }
+
+    if (error) {
+        return <Text style={styles.errorText}>Failed to load programs. Please try again later.</Text>;
+    }
 
     return (
         <View style={styles.container}>
             <Text style={styles.headerText}>Available Supporting Programs</Text>
 
-            {/* List of Programs */}
             <FlatList
                 data={programs}
                 keyExtractor={(item) => item.id.toString()}
@@ -97,5 +97,16 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "bold",
         color: "#007AFF",
+    },
+    loader: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    errorText: {
+        color: "red",
+        fontSize: 16,
+        textAlign: "center",
+        marginTop: 20,
     },
 });
