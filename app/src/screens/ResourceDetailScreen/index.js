@@ -1,40 +1,10 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Button, ScrollView, StyleSheet, Text, View } from 'react-native';
-import CONFIG from '@/app/src/config/config';
-import React from 'react';
+import { ActivityIndicator, Button, ScrollView, StyleSheet, Text, View } from 'react-native';
+import useTests from '@/app/Services/Features/Test/useTests';
 
 const ResourceDetailScreen = ({ route, navigation }) => {
     const { testId, testCategory } = route.params;
-    const [testDetails, setTestDetails] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchTestDetails = async () => {
-            try {
-                const response = await fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/tests/${testId}`);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Failed to fetch test details: ${response.status} - ${errorText}`);
-                }
-
-                const contentType = response.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    throw new Error("Invalid response format: Expected JSON.");
-                }
-
-                const data = await response.json();
-                setTestDetails(data);
-            } catch (error) {
-                console.error('Error:', error.message);
-                Alert.alert('Error', error.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchTestDetails();
-    }, [testId]);
+    const { tests, loading } = useTests(1, 10, null);
+    const testDetails = tests.find(test => test.id === testId);
 
     if (loading) {
         return (
@@ -52,7 +22,6 @@ const ResourceDetailScreen = ({ route, navigation }) => {
         );
     }
 
-    // Check test type
     const isPsychologicalTest = testDetails.type === 'psychological';
     const isPeriodicTest = testDetails.type === 'periodic';
 
@@ -74,7 +43,7 @@ const ResourceDetailScreen = ({ route, navigation }) => {
                 title="Take Test"
                 onPress={() => navigation.navigate('TakeTestScreen', {
                     testId: testDetails.id,
-                    testName: testDetails.title, 
+                    testName: testDetails.title,
                     testCategory,
                     questions: testDetails.questions || [],
                     psychologyTestOptions: isPsychologicalTest ? testDetails.psychologyTestOptions || [] : [],

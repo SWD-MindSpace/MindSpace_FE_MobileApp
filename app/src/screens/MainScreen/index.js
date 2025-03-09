@@ -1,65 +1,13 @@
-import { Image, FlatList, StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import React, { useState, useRef, useEffect } from 'react';
-import CONFIG from '@/app/src/config/config';
-const { width } = Dimensions.get('window');
+import { Image, FlatList, StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions } from "react-native";
+import React from "react";
+import useBlogs from "@/app/Services/Features/Blog/useBlogs";
+import useArticles from "@/app/Services/Features/Article/useArticles";
+
+const { width } = Dimensions.get("window");
 
 const MainScreen = ({ navigation }) => {
-    const blogApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/resources/blogs`;
-    const articleApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/resources/articles`; 
-    const cloudinaryBaseUrl = 'https://res.cloudinary.com/dhaltx1cv/image/upload/v1741160743/MindSpace/';
-
-    const [blogs, setBlogs] = useState([]);
-    const [articles, setArticles] = useState([]);
-    const [activeIndex, setActiveIndex] = useState(0);
-    const flatListRef = useRef(null);
-
-    const getAllBlog = async () => {
-        try {
-            const response = await fetch(blogApiURL);
-            const jsonData = await response.json();
-            if (jsonData && jsonData.data) {
-                const formattedBlogs = jsonData.data.map(item => ({
-                    ...item,
-                    cloudinaryImageUrl: `https://res.cloudinary.com/dhaltx1cv/image/upload/v1741160743/MindSpace/${item.imagePath}`
-                }));
-                setBlogs(formattedBlogs);
-            }
-        } catch (error) {
-            console.error("Error fetching blog data:", error);
-        }
-    };
-    
-    const getAllArticles = async () => {
-        try {
-            const response = await fetch(articleApiURL);
-            const jsonData = await response.json();
-            if (jsonData && jsonData.data) {
-                const formattedArticles = jsonData.data.map(item => ({
-                    ...item,
-                    cloudinaryImageUrl: `https://res.cloudinary.com/dhaltx1cv/image/upload/v1741160743/MindSpace/${item.imagePath}`
-                }));
-                setArticles(formattedArticles);
-            }
-        } catch (error) {
-            console.error("Error fetching article data:", error);
-        }
-    };
-    
-
-    useEffect(() => {
-        getAllBlog();
-        getAllArticles();
-    }, []);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const nextIndex = (activeIndex + 1) % blogs.length;
-            setActiveIndex(nextIndex);
-            flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-        }, 5000);
-
-        return () => clearInterval(interval);
-    }, [activeIndex, blogs]);
+    const { blogs, activeIndex, setActiveIndex, flatListRef } = useBlogs();
+    const { articles } = useArticles();
 
     return (
         <ScrollView style={styles.container}>
@@ -74,7 +22,7 @@ const MainScreen = ({ navigation }) => {
                 snapToAlignment="center"
                 snapToInterval={width}
                 decelerationRate="fast"
-                contentContainerStyle={{ alignItems: 'center' }}
+                contentContainerStyle={{ alignItems: "center" }}
                 onViewableItemsChanged={({ viewableItems }) => {
                     if (viewableItems.length > 0) {
                         setActiveIndex(viewableItems[0].index);
@@ -87,7 +35,7 @@ const MainScreen = ({ navigation }) => {
                         <Text style={styles.mainText}>{item.title}</Text>
                         <TouchableOpacity
                             style={styles.readMoreButton}
-                            onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}
+                            onPress={() => navigation.navigate("BlogDetail", { blogId: item.id })}
                         >
                             <Text style={styles.readMoreText}>Read More</Text>
                         </TouchableOpacity>
@@ -112,7 +60,7 @@ const MainScreen = ({ navigation }) => {
                     scrollEnabled={false}
                     renderItem={({ item }) => (
                         <View style={styles.blogItem}>
-                            <TouchableOpacity onPress={() => navigation.navigate('BlogDetail', { blogId: item.id })}>
+                            <TouchableOpacity onPress={() => navigation.navigate("BlogDetail", { blogId: item.id })}>
                                 <Image source={{ uri: item.cloudinaryImageUrl }} style={styles.blogImage} />
                                 <View style={styles.textWrapper}>
                                     <Text style={styles.blogText}>{item.title}</Text>
@@ -133,7 +81,7 @@ const MainScreen = ({ navigation }) => {
                     renderItem={({ item }) => (
                         <TouchableOpacity
                             style={styles.articleItem}
-                            onPress={() => navigation.navigate('ArticleDetail', { articleId: item.id })}
+                            onPress={() => navigation.navigate("ArticleDetail", { articleId: item.id })}
                         >
                             <Image source={{ uri: item.cloudinaryImageUrl }} style={styles.articleImage} />
                             <View style={styles.articleTextContainer}>

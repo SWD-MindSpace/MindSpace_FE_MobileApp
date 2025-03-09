@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { getTestHistory, removeTestHistoryItem } from '../../utils/storageHelper';
+import { getTestHistory, removeTestHistoryItem } from '@/app/Services/Utils/storageHelper';
 
 const TestHistoryScreen = () => {
     const [testHistory, setTestHistory] = useState([]);
@@ -19,7 +19,7 @@ const TestHistoryScreen = () => {
 
     const handleRemove = async (index) => {
         await removeTestHistoryItem(index);
-        fetchHistory(); m
+        fetchHistory();
     };
 
     if (loading) return <ActivityIndicator size="large" color="#007BFF" style={styles.loader} />;
@@ -30,7 +30,7 @@ const TestHistoryScreen = () => {
             <Text style={styles.header}>Test History</Text>
             <FlatList
                 data={testHistory}
-                keyExtractor={(item, index) => `${item.testId}_${index}`} 
+                keyExtractor={(item, index) => `${item.testId}_${index}`}
                 renderItem={({ item, index }) => (
                     <View style={styles.historyItem}>
                         <Text style={styles.testTitle}>Test Name: {item.testName}</Text>

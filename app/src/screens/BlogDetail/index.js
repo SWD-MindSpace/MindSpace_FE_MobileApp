@@ -1,35 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import RenderHtml from 'react-native-render-html';
-import CONFIG from '@/app/src/config/config'
-const { width } = Dimensions.get('window');
 import { LogBox } from 'react-native';
+import useBlogs from '@/app/Services/Features/Blog/useBlogsDetail';
 
+const { width } = Dimensions.get('window');
 
 const BlogDetail = ({ route }) => {
     const { blogId } = route.params;
-    const [blog, setBlog] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    const blogApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/resources/blogs/${blogId}`;
-
-    useEffect(() => {
-        const getBlogDetail = async () => {
-            try {
-                const response = await fetch(blogApiURL);
-                const jsonData = await response.json();
-                if (jsonData) {
-                    setBlog(jsonData);
-                }
-            } catch (error) {
-                console.error("Error fetching blog detail:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        getBlogDetail();
-    }, [blogId]);
+    const { blog, loading } = useBlogs(blogId);
 
     if (loading) {
         return <Text>Loading...</Text>;
@@ -50,16 +29,12 @@ const BlogDetail = ({ route }) => {
             {blog.sections.map((section, index) => (
                 <View key={index} style={styles.sectionContainer}>
                     <Text style={styles.sectionHeading}>{section.heading}</Text>
-                    <RenderHtml
-                        contentWidth={width}
-                        source={{ html: section.htmlContent }}
-                    />
+                    <RenderHtml contentWidth={width} source={{ html: section.htmlContent }} />
                 </View>
             ))}
         </ScrollView>
     );
 };
-
 
 LogBox.ignoreLogs([
     'Warning: TNodeChildrenRenderer: Support for defaultProps will be removed',
