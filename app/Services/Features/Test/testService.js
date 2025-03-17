@@ -3,18 +3,26 @@ import CONFIG from '@/app/Services/Configs/config';
 export const fetchTests = async (pageIndex, pageSize, userRole, selectedCategory) => {
     try {
         let resourceApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/tests?pageIndex=${pageIndex}&pageSize=${pageSize}`;
-        
+
         const response = await fetch(resourceApiURL);
         const jsonData = await response.json();
 
         if (jsonData?.data) {
-            let filteredTests = jsonData.data.filter(test => test.targetUser === userRole && test.testCategory.name !== "Parenting");
+            let filteredTests = jsonData.data.filter(test => {
+                const testRole = test.targetUser?.trim().toLowerCase() || '';
+                const expectedRole = userRole?.trim().toLowerCase() || '';
 
+                console.log(`Test Target User: ${testRole}, Expected Role: ${expectedRole}`); // Debugging
+
+                return testRole === expectedRole; // Ensure correct role filtering
+            });
+
+            // If a category is selected, filter tests by category
             if (selectedCategory) {
-                filteredTests = filteredTests.filter(test => test.testCategory.name === selectedCategory);
+                filteredTests = filteredTests.filter(test => test.testCategory.name.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
             }
 
-            return { data: filteredTests, count: jsonData.count }; // Ensure count remains unchanged
+            return { data: filteredTests, count: jsonData.count };
         }
         return { data: [], count: 0 };
     } catch (error) {

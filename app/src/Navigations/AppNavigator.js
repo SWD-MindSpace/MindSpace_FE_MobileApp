@@ -41,8 +41,8 @@ function MainTabs() {
             }
         };
 
-        fetchUserRole(); 
-    }, []); 
+        fetchUserRole();
+    }, []);
 
 
     if (userRole === null) {
@@ -72,14 +72,13 @@ function MainTabs() {
                 initialParams={{ userRole }} // Pass userRole as a parameter to MainScreen
                 options={{ headerShown: false }}
             />
-            <Tab.Screen name="Resource"
-                component={(props) => <ResourceScreen {...props} userRole={userRole} />}
-                options={{ headerShown: false }} />
-            <Tab.Screen
-                name="Service"
-                component={(props) => <ServiceScreen {...props} userRole={userRole} />}
-                options={{ headerShown: false }}
-            />
+            <Tab.Screen name="Resource" options={{ headerShown: false }}>
+                {props => <ResourceScreen {...props} userRole={userRole} />}
+            </Tab.Screen>
+            <Tab.Screen name="Service" options={{ headerShown: false }}>
+                {props => <ServiceScreen {...props} userRole={userRole} />}
+            </Tab.Screen>
+
             <Tab.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
         </Tab.Navigator>
     );

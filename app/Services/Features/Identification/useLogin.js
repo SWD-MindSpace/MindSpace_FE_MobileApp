@@ -16,19 +16,21 @@ const useLogin = () => {
 
             if (data.access_token) {
                 // Save token and user role into AsyncStorage
-                const { userRole } = await identityService.saveAuthData(data.access_token);
-                await AsyncStorage.setItem("userRole", userRole); // Save userRole in AsyncStorage
+                await AsyncStorage.setItem("authToken", data.access_token);
 
-                // After saving, navigate based on the role
+                const { userRole } = await identityService.saveAuthData(data.access_token);
+
                 switch (userRole.toLowerCase()) {
                     case "student":
                     case "parent":
                     case "psychologist":
-                        navigation.navigate("MainScreen", { userRole }); // Pass userRole as a prop to MainScreen
+                        navigation.navigate("MainScreen", { userRole });
                         break;
                     default:
                         throw new Error("Unknown role received");
                 }
+            } else {
+                throw new Error("No access token received from API.");
             }
         } catch (error) {
             console.error("Login Error:", error.message);

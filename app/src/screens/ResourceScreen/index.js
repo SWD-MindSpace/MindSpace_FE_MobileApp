@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FlatList, Text, View, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import useTests from '@/app/Services/Features/Test/useTests';
 
-const ResourceScreen = ({ navigation }) => {
+const ResourceScreen = ({ navigation, userRole }) => {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [pageIndex, setPageIndex] = useState(1);
-    const pageSize = 5;
+    const [isStudent, setIsStudent] = useState(false);
+    const [isParent, setIsParent] = useState(false);
 
+    const pageSize = 5;
     const { tests, categories, loading, totalCount, error } = useTests(pageIndex, pageSize, selectedCategory);
 
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -26,6 +28,34 @@ const ResourceScreen = ({ navigation }) => {
         }
     };
 
+    useEffect(() => {
+        const trimmedRole = userRole?.trim() || '';
+        console.log(`User role: ${trimmedRole}`);
+        setIsStudent(trimmedRole === 'student');
+        setIsParent(trimmedRole === 'parent');
+    }, [userRole]);
+
+    const filteredTests = useMemo(() => {
+        return tests.map(test => ({
+            ...test,
+            title: test.title?.trim() || '',
+            description: test.description?.trim() || '',
+            targetUser: test.targetUser?.trim() || '',
+            testCategory: {
+                ...test.testCategory,
+                name: test.testCategory?.name?.trim() || ''
+            }
+        })).filter(test => {
+            if (isStudent) {
+                return test.targetUser === 'student';
+            } else if (isParent) {
+                return test.targetUser === 'parent' || test.testCategory.name === 'parenting';
+            }
+            return true;
+        });
+    }, [tests, isStudent, isParent]);
+
+
     if (loading) {
         return <ActivityIndicator size="large" color="#0000ff" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} />;
     }
@@ -33,13 +63,6 @@ const ResourceScreen = ({ navigation }) => {
     if (error) {
         return <Text style={{ textAlign: 'center', color: 'red' }}>Error loading tests. Please try again later.</Text>;
     }
-
-    // Filter tests by the targetUser
-    const filteredTests = tests.filter(test => {
-        console.log(test.targetUser);  // Log the targetUser for each test
-        return test.targetUser === 'Student' || test.targetUser === 'Parent';
-    });
-
 
     return (
         <View style={{ flex: 1, backgroundColor: '#fff', padding: 10 }}>
@@ -49,7 +72,7 @@ const ResourceScreen = ({ navigation }) => {
             <View>
                 <FlatList
                     horizontal
-                    data={categories}
+                    data={categories.map(category => category.trim())} // Trim categories
                     keyExtractor={(item) => item}
                     contentContainerStyle={styles.categoryContainer}
                     renderItem={({ item }) => (
@@ -68,7 +91,7 @@ const ResourceScreen = ({ navigation }) => {
 
             {/* Test List */}
             <FlatList
-                data={filteredTests} // Use filtered tests
+                data={filteredTests}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity
@@ -114,6 +137,16 @@ const ResourceScreen = ({ navigation }) => {
                     <Text style={styles.paginationText}>Next</Text>
                 </Pressable>
             </View>
+
+            {/* Test History Button */}
+            {isStudent && (
+                <TouchableOpacity
+                    style={styles.historyButton}
+                    onPress={() => navigation.navigate('TestHistory')}
+                >
+                    <Text style={styles.historyButtonText}>View Test History</Text>
+                </TouchableOpacity>
+            )}
         </View>
     );
 };
@@ -132,6 +165,8 @@ const styles = {
     pageIndicator: { fontSize: 16, fontWeight: 'bold', marginTop: 10 },
     disabledButton: { backgroundColor: '#ccc' },
     categoryContainer: { flexDirection: 'row', justifyContent: 'center', marginVertical: 10 },
+    historyButton: { backgroundColor: '#17A2B8', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
+    historyButtonText: { fontSize: 18, fontWeight: 'bold', color: 'white' },
 };
 
 export default ResourceScreen;

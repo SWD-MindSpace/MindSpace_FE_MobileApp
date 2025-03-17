@@ -1,36 +1,32 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { jwtDecode } from "jwt-decode"; // FIXED: Proper import at the top
 import CONFIG from "@/app/Services/Configs/config";
 
 const login = async (username, password) => {
     const apiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identities/login`;
 
-    const response = await fetch(apiURL, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ Email: username, password }),
-    });
-
-    const text = await response.text();
-
-    let data;
     try {
-        data = JSON.parse(text);
+        const response = await fetch(apiURL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ Email: username, password }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Login failed: ${response.status} - ${errorText}`);
+        }
+
+        return await response.json(); // FIXED: Directly returning JSON data
     } catch (error) {
-        throw new Error(`Invalid JSON response: ${text}`);
+        console.error("Login API Error:", error);
+        throw new Error("An error occurred while logging in.");
     }
-
-    if (!response.ok) {
-        throw new Error(`Login failed: ${response.status} - ${data.message || "Invalid request"}`);
-    }
-
-    return data;
 };
 
 const saveAuthData = async (token) => {
-    const { jwtDecode } = await import("jwt-decode");
-
     if (!token) {
         throw new Error("Token is missing");
     }
@@ -43,13 +39,12 @@ const saveAuthData = async (token) => {
     const parentId = decodedToken["parentId"] || null;
 
     if (!userRole) {
-        throw new Error("Role not found in token. Decoded token structure: " + JSON.stringify(decodedToken));
+        throw new Error("Role not found in token. Decoded token: " + JSON.stringify(decodedToken));
     }
 
     // Saving the auth data to AsyncStorage
     await AsyncStorage.setItem("authToken", token);
     await AsyncStorage.setItem("userRole", userRole);
-    console.log("Stored userRole:", userRole);
 
     if (studentId) {
         await AsyncStorage.setItem("studentId", studentId.toString());
