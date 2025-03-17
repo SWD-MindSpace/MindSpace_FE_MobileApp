@@ -2,12 +2,20 @@ import { Image, FlatList, StyleSheet, Text, View, ScrollView, TouchableOpacity, 
 import React from "react";
 import useBlogs from "@/app/Services/Features/Blog/useBlogs";
 import useArticles from "@/app/Services/Features/Article/useArticles";
-
+import { useRef } from "react";
 const { width } = Dimensions.get("window");
 
-const MainScreen = ({ navigation }) => {
+const MainScreen = ({ navigation, route}) => {
+    const { userRole } = route.params || {};  
     const { blogs, activeIndex, setActiveIndex, flatListRef } = useBlogs();
     const { articles } = useArticles();
+    const viewabilityConfig = { viewAreaCoveragePercentThreshold: 50 };
+    const onViewableItemsChanged = useRef(({ viewableItems }) => {
+        if (viewableItems.length > 0 && viewableItems[0]?.index !== undefined) {
+            setActiveIndex(viewableItems[0].index);
+        }
+    }).current;
+
 
     return (
         <ScrollView style={styles.container}>
@@ -23,12 +31,10 @@ const MainScreen = ({ navigation }) => {
                 snapToInterval={width}
                 decelerationRate="fast"
                 contentContainerStyle={{ alignItems: "center" }}
-                onViewableItemsChanged={({ viewableItems }) => {
-                    if (viewableItems.length > 0) {
-                        setActiveIndex(viewableItems[0].index);
-                    }
-                }}
-                viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
+                initialNumToRender={6}
+                maxToRenderPerBatch={10}
                 renderItem={({ item }) => (
                     <View style={styles.mainBlogContainer}>
                         <Image source={{ uri: item.cloudinaryImageUrl }} style={styles.mainImage} />
@@ -53,22 +59,33 @@ const MainScreen = ({ navigation }) => {
             {/* Latest Blogs Section */}
             <View style={styles.blogContainer}>
                 <Text style={styles.sectionHeader}>Latest Blogs</Text>
-                <FlatList
-                    data={blogs}
-                    keyExtractor={(item) => item.id.toString()}
-                    numColumns={2}
-                    scrollEnabled={false}
-                    renderItem={({ item }) => (
-                        <View style={styles.blogItem}>
-                            <TouchableOpacity onPress={() => navigation.navigate("BlogDetail", { blogId: item.id })}>
-                                <Image source={{ uri: item.cloudinaryImageUrl }} style={styles.blogImage} />
-                                <View style={styles.textWrapper}>
-                                    <Text style={styles.blogText}>{item.title}</Text>
+                {blogs.length > 0 ? (
+                    <FlatList
+                        data={blogs}
+                        keyExtractor={(item) => item.id.toString()}
+                        numColumns={2}
+                        scrollEnabled={false}
+                        renderItem={({ item }) => {
+                            return (
+                                <View style={styles.blogItem}>
+                                    <TouchableOpacity onPress={() => navigation.navigate("BlogDetail", { blogId: item.id })}>
+                                        {item.cloudinaryImageUrl ? (
+                                            <Image source={{ uri: item.cloudinaryImageUrl }} style={styles.blogImage} />
+                                        ) : (
+                                            <Text>No Image</Text>
+                                        )}
+                                        <View style={styles.textWrapper}>
+                                            <Text style={styles.blogText}>{item.title}</Text>
+                                        </View>
+                                    </TouchableOpacity>
                                 </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                />
+                            );
+                        }}
+                    />
+                ) : (
+                    <Text style={{ textAlign: "center", marginTop: 20 }}>No Blogs Available</Text>
+                )}
+
             </View>
 
             {/* Latest Articles Section */}
@@ -111,7 +128,7 @@ const styles = StyleSheet.create({
     activeIndicator: { backgroundColor: '#007BFF', width: 10, height: 10 },
     blogContainer: { flex: 1, padding: 10 },
     blogItem: { width: '48%', margin: '1%', padding: 10, borderRadius: 8, alignItems: 'center', backgroundColor: 'lightblue' },
-    blogImage: { width: '100%', height: 100, borderRadius: 8 },
+    blogImage: { width: 130, height: 130, borderRadius: 8, resizeMode: "cover", backgroundColor: "gray" },
     textWrapper: { borderTopWidth: 1, borderTopColor: '#E0E0E0', marginTop: 5, paddingTop: 5 },
     blogText: { fontSize: 16, fontWeight: '600', textAlign: 'center', marginTop: 5, color: '#333', paddingHorizontal: 5 },
     sectionHeader: { fontSize: 18, fontWeight: 'bold', marginVertical: 10, paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: '#E0E0E0', letterSpacing: 1 },

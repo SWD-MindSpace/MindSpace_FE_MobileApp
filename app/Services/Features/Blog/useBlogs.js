@@ -23,7 +23,9 @@ const useBlogs = () => {
         if (blogs.length > 0) {
             const interval = setInterval(() => {
                 setActiveIndex((prevIndex) => (prevIndex + 1) % blogs.length);
-                flatListRef.current?.scrollToIndex({ index: activeIndex, animated: true });
+                if (blogs.length > 0 && activeIndex < blogs.length) {
+                    flatListRef.current?.scrollToIndex({ index: activeIndex, animated: true });
+                }
             }, 5000);
 
             return () => clearInterval(interval);

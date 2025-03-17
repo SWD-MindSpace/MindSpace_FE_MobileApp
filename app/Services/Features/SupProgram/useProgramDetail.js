@@ -20,7 +20,7 @@ const useProgramDetail = (programId) => {
 
                 const [programRes, profileRes] = await Promise.all([
                     fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs/${programId}`),
-                    fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/profile`, {
+                    fetch(`${CONFIG.baseUrl}/${CONFIG.apiVersion}/identities/profile`, {
                         method: "GET",
                         headers: {
                             "Content-Type": "application/json",
@@ -37,6 +37,14 @@ const useProgramDetail = (programId) => {
                     programRes.json(),
                     profileRes.json(),
                 ]);
+
+                // Retrieve stored Cloudinary images from AsyncStorage
+                const spImageUrls = await AsyncStorage.getItem("supportingProgramImages");
+                const jsonParseSPImageUrls = JSON.parse(spImageUrls) || {};
+
+                if (programData.id && jsonParseSPImageUrls[programData.id]) {
+                    programData.imageUrl = jsonParseSPImageUrls[programData.id];
+                }
 
                 setProgram(programData);
                 setProfileData(profileData);

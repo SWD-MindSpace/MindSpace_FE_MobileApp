@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import useLogin from "@/app/Services/Features/Identification/useLogin"
+import useLogin from "@/app/Services/Features/Identification/useLogin";
 
 const LoginScreen = () => {
     const navigation = useNavigation();
@@ -14,6 +14,7 @@ const LoginScreen = () => {
     const handleLogin = async () => {
         await login(username, password, navigation);
     };
+
 
     return (
         <View style={styles.container}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FlatList, Text, View, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import useTests from '@/app/Services/Features/Test/useTests';
@@ -8,9 +8,9 @@ const ResourceScreen = ({ navigation }) => {
     const [pageIndex, setPageIndex] = useState(1);
     const pageSize = 5;
 
-    const { tests, categories, loading, totalCount } = useTests(pageIndex, pageSize, selectedCategory);
-    
-    const totalPages = Math.ceil(totalCount / pageSize); // Ensure correct total page calculation
+    const { tests, categories, loading, totalCount, error } = useTests(pageIndex, pageSize, selectedCategory);
+
+    const totalPages = Math.ceil(totalCount / pageSize);
     const hasNextPage = pageIndex < totalPages;
     const hasPrevPage = pageIndex > 1;
 
@@ -26,12 +26,26 @@ const ResourceScreen = ({ navigation }) => {
         }
     };
 
+    if (loading) {
+        return <ActivityIndicator size="large" color="#0000ff" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} />;
+    }
+
+    if (error) {
+        return <Text style={{ textAlign: 'center', color: 'red' }}>Error loading tests. Please try again later.</Text>;
+    }
+
+    // Filter tests by the targetUser
+    const filteredTests = tests.filter(test => {
+        console.log(test.targetUser);  // Log the targetUser for each test
+        return test.targetUser === 'Student' || test.targetUser === 'Parent';
+    });
+
+
     return (
         <View style={{ flex: 1, backgroundColor: '#fff', padding: 10 }}>
-            {loading && <ActivityIndicator size="large" color="#0000ff" />}
-
             <Text style={styles.sectionHeader}>Available Tests</Text>
 
+            {/* Category Filter */}
             <View>
                 <FlatList
                     horizontal
@@ -42,7 +56,7 @@ const ResourceScreen = ({ navigation }) => {
                         <Pressable
                             style={[
                                 styles.categoryButton,
-                                selectedCategory === item && styles.selectedCategory
+                                selectedCategory === item && styles.selectedCategory,
                             ]}
                             onPress={() => setSelectedCategory(selectedCategory === item ? null : item)}
                         >
@@ -52,8 +66,9 @@ const ResourceScreen = ({ navigation }) => {
                 />
             </View>
 
+            {/* Test List */}
             <FlatList
-                data={tests}
+                data={filteredTests} // Use filtered tests
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity
@@ -74,8 +89,12 @@ const ResourceScreen = ({ navigation }) => {
                         </View>
                     </TouchableOpacity>
                 )}
+                ListEmptyComponent={
+                    <Text style={{ textAlign: 'center', marginTop: 20 }}>No tests available in this category.</Text>
+                }
             />
 
+            {/* Pagination */}
             <View style={styles.paginationContainer}>
                 <Pressable
                     style={[styles.paginationButton, !hasPrevPage && styles.disabledButton]}
@@ -95,13 +114,6 @@ const ResourceScreen = ({ navigation }) => {
                     <Text style={styles.paginationText}>Next</Text>
                 </Pressable>
             </View>
-
-            <TouchableOpacity
-                style={styles.historyButton}
-                onPress={() => navigation.navigate('TestHistory')}
-            >
-                <Text style={styles.historyButtonText}>View Test History</Text>
-            </TouchableOpacity>
         </View>
     );
 };
@@ -120,8 +132,6 @@ const styles = {
     pageIndicator: { fontSize: 16, fontWeight: 'bold', marginTop: 10 },
     disabledButton: { backgroundColor: '#ccc' },
     categoryContainer: { flexDirection: 'row', justifyContent: 'center', marginVertical: 10 },
-    historyButton: { backgroundColor: '#17A2B8', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
-    historyButtonText: { fontSize: 18, fontWeight: 'bold', color: 'white' },
 };
 
 export default ResourceScreen;

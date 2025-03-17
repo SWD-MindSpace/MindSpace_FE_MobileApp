@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAllArticles } from "./articleService";
 
-const useArticless = () => {
+const useArticles = () => {
     const [articles, setArticles] = useState([]);
 
     useEffect(() => {
@@ -20,4 +20,4 @@ const useArticless = () => {
     return { articles };
 };
 
-export default useArticless;
+export default useArticles;
