@@ -5,14 +5,12 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import useProgramDetail from "@/app/Services/Features/SupProgram/useProgramDetail";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useUserRole } from "@/app/Services/context/userRoleContext";
 
 const SPDetailScreen = ({ route }) => {
     const { programId, signedUpPrograms = [] } = route.params;  // Default to empty array if undefined
     const navigation = useNavigation();
-    const { userRole } = useUserRole(); // Get userRole from context
 
-    const { program, loading, error } = useProgramDetail(programId, userRole);
+    const { program, loading, error } = useProgramDetail(programId);
     const [isSignedUp, setIsSignedUp] = useState(false);
 
     // Check if user is signed up for the program from AsyncStorage

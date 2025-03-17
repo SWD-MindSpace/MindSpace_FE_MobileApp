@@ -1,18 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import { FlatList, Text, View, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import useTests from '@/app/Services/Features/Test/useTests';
 
-const ResourceScreen = ({ navigation, userRole }) => {
+const ResourceScreen = ({ navigation }) => {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [pageIndex, setPageIndex] = useState(1);
-    const [isStudent, setIsStudent] = useState(false);
-    const [isParent, setIsParent] = useState(false);
-
     const pageSize = 5;
-    const { tests, categories, loading, totalCount, error } = useTests(pageIndex, pageSize, selectedCategory);
 
-    const totalPages = Math.ceil(totalCount / pageSize);
+    const { tests, categories, loading, totalCount } = useTests(pageIndex, pageSize, selectedCategory);
+    
+    const totalPages = Math.ceil(totalCount / pageSize); 
     const hasNextPage = pageIndex < totalPages;
     const hasPrevPage = pageIndex > 1;
 
@@ -28,58 +26,23 @@ const ResourceScreen = ({ navigation, userRole }) => {
         }
     };
 
-    useEffect(() => {
-        const trimmedRole = userRole?.trim() || '';
-        console.log(`User role: ${trimmedRole}`);
-        setIsStudent(trimmedRole === 'student');
-        setIsParent(trimmedRole === 'parent');
-    }, [userRole]);
-
-    const filteredTests = useMemo(() => {
-        return tests.map(test => ({
-            ...test,
-            title: test.title?.trim() || '',
-            description: test.description?.trim() || '',
-            targetUser: test.targetUser?.trim() || '',
-            testCategory: {
-                ...test.testCategory,
-                name: test.testCategory?.name?.trim() || ''
-            }
-        })).filter(test => {
-            if (isStudent) {
-                return test.targetUser === 'student';
-            } else if (isParent) {
-                return test.targetUser === 'parent' || test.testCategory.name === 'parenting';
-            }
-            return true;
-        });
-    }, [tests, isStudent, isParent]);
-
-
-    if (loading) {
-        return <ActivityIndicator size="large" color="#0000ff" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} />;
-    }
-
-    if (error) {
-        return <Text style={{ textAlign: 'center', color: 'red' }}>Error loading tests. Please try again later.</Text>;
-    }
-
     return (
         <View style={{ flex: 1, backgroundColor: '#fff', padding: 10 }}>
+            {loading && <ActivityIndicator size="large" color="#0000ff" />}
+
             <Text style={styles.sectionHeader}>Available Tests</Text>
 
-            {/* Category Filter */}
             <View>
                 <FlatList
                     horizontal
-                    data={categories.map(category => category.trim())} // Trim categories
+                    data={categories}
                     keyExtractor={(item) => item}
                     contentContainerStyle={styles.categoryContainer}
                     renderItem={({ item }) => (
                         <Pressable
                             style={[
                                 styles.categoryButton,
-                                selectedCategory === item && styles.selectedCategory,
+                                selectedCategory === item && styles.selectedCategory
                             ]}
                             onPress={() => setSelectedCategory(selectedCategory === item ? null : item)}
                         >
@@ -89,9 +52,8 @@ const ResourceScreen = ({ navigation, userRole }) => {
                 />
             </View>
 
-            {/* Test List */}
             <FlatList
-                data={filteredTests}
+                data={tests}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity
@@ -112,12 +74,8 @@ const ResourceScreen = ({ navigation, userRole }) => {
                         </View>
                     </TouchableOpacity>
                 )}
-                ListEmptyComponent={
-                    <Text style={{ textAlign: 'center', marginTop: 20 }}>No tests available in this category.</Text>
-                }
             />
 
-            {/* Pagination */}
             <View style={styles.paginationContainer}>
                 <Pressable
                     style={[styles.paginationButton, !hasPrevPage && styles.disabledButton]}
@@ -138,15 +96,12 @@ const ResourceScreen = ({ navigation, userRole }) => {
                 </Pressable>
             </View>
 
-            {/* Test History Button */}
-            {isStudent && (
-                <TouchableOpacity
-                    style={styles.historyButton}
-                    onPress={() => navigation.navigate('TestHistory')}
-                >
-                    <Text style={styles.historyButtonText}>View Test History</Text>
-                </TouchableOpacity>
-            )}
+            <TouchableOpacity
+                style={styles.historyButton}
+                onPress={() => navigation.navigate('TestHistory')}
+            >
+                <Text style={styles.historyButtonText}>View Test History</Text>
+            </TouchableOpacity>
         </View>
     );
 };

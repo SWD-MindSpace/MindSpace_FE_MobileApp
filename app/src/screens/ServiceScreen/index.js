@@ -35,17 +35,15 @@ const ServiceScreen = () => {
                 const storedQuantities = await AsyncStorage.getItem("programQuantities");
                 if (storedQuantities) {
                     const parsedQuantities = JSON.parse(storedQuantities);
-                    setQuantities(parsedQuantities); // Set quantities to state
-
                     const updatedPrograms = programs.map(program => {
                         const newQuantity = parsedQuantities[program.id] || 0; // Default to 0 if no quantity found
                         return { ...program, maxQuantity: newQuantity };
                     });
-
                     // Only update if the programs list has changed
                     if (JSON.stringify(updatedPrograms) !== JSON.stringify(programs)) {
                         setPrograms(updatedPrograms);
                     }
+                    setQuantities(parsedQuantities); // Save the quantities to state
                 }
             } catch (error) {
                 console.error("Error loading program quantities:", error);
@@ -53,7 +51,8 @@ const ServiceScreen = () => {
         };
 
         loadProgramQuantities();
-    }, [programs]);
+    }, [programs, signedUpPrograms]);  // Add signedUpPrograms as a dependency to trigger re-fetching when it changes
+
 
     const handleCancel = async (programId) => {
         Alert.alert(
@@ -70,7 +69,7 @@ const ServiceScreen = () => {
                         try {
                             // Update quantities and signed-up programs state
                             const updatedQuantities = { ...quantities };
-                            updatedQuantities[programId] += 1; // Increase quantity
+                            updatedQuantities[programId] += 1;
                             setQuantities(updatedQuantities);
 
                             // Remove the program from signed-up programs
@@ -79,8 +78,12 @@ const ServiceScreen = () => {
 
                             // Save updated state to AsyncStorage
                             await AsyncStorage.setItem("programQuantities", JSON.stringify(updatedQuantities));
+                            await AsyncStorage.setItem("yourServices", JSON.stringify(updatedServices));
+
+                            // Update signedUpPrograms in AsyncStorage
                             await AsyncStorage.setItem("signedUpPrograms", JSON.stringify(updatedServices));
 
+                            // Optionally: Show a success message
                             Alert.alert("Success", "You have successfully canceled your registration.");
                         } catch (error) {
                             console.error("Error canceling program:", error);
@@ -90,6 +93,7 @@ const ServiceScreen = () => {
             ]
         );
     };
+
 
     if (loading) {
         return <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />;

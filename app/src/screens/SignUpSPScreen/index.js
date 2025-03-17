@@ -6,11 +6,11 @@ import { useNavigation } from "@react-navigation/native";
 import { Avatar } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import usePrograms from "@/app/Services/Features/SupProgram/usePrograms";
-import { useUserRole } from "@/app/Services/context/userRoleContext";
+
 
 const SignUpSPScreen = ({ route }) => {
     const navigation = useNavigation();
-    const { userRole } = useUserRole(); // Get userRole from context
+
 
     // Ensure programId is properly retrieved
     const programId = Number(route.params?.programId);
@@ -21,7 +21,7 @@ const SignUpSPScreen = ({ route }) => {
         return null;  // Prevent rendering if the ID is invalid
     }
 
-    const { program, profile, loading, error } = usePrograms(programId, userRole);
+    const { program, profile, loading, error } = usePrograms(programId);
     const [updating, setUpdating] = useState(false);
 
     const handleSubmit = async () => {
