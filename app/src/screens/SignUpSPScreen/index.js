@@ -6,72 +6,87 @@ import { useNavigation } from "@react-navigation/native";
 import { Avatar } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import usePrograms from "@/app/Services/Features/SupProgram/usePrograms";
-
+import { jwtDecode } from "jwt-decode";
+import CONFIG from '@/app/Services/Configs/config';
 
 const SignUpSPScreen = ({ route }) => {
     const navigation = useNavigation();
-
-
-    // Ensure programId is properly retrieved
     const programId = Number(route.params?.programId);
     console.log("🔹 Received programId:", programId);
 
     if (!programId || isNaN(programId) || programId <= 0) {
         Alert.alert("Error", "Invalid program ID.");
-        return null;  // Prevent rendering if the ID is invalid
+        return null;
     }
 
     const { program, profile, loading, error } = usePrograms(programId);
     const [updating, setUpdating] = useState(false);
 
     const handleSubmit = async () => {
-        console.log("🚀 Submitting request for programId:", programId);
-
-        if (!programId || isNaN(programId) || programId <= 0) {
-            Alert.alert("Error", "Invalid program ID.");
-            console.error("❌ Invalid programId before update:", programId);
-            return;
-        }
-
         try {
-            // Get current signed-up programs
-            let signedUpPrograms = await AsyncStorage.getItem("signedUpPrograms");
-            signedUpPrograms = signedUpPrograms ? JSON.parse(signedUpPrograms) : [];
-
-            // Check if the program has already been signed up for
-            if (signedUpPrograms.includes(programId)) {
-                Alert.alert("Already Signed Up", "You have already signed up for this program.");
-                return; // Prevent further action if already signed up
+            setUpdating(true);
+            const token = await AsyncStorage.getItem("authToken");
+            if (!token) {
+                Alert.alert("Error", "User not authenticated.");
+                return;
             }
 
-            // Update program locally (decrease maxQuantity)
-            const newProgram = { ...program, maxQuantity: Math.max((program.maxQuantity ?? 0) - 1, 0) };
-            console.log("📤 Updated program locally:", JSON.stringify(newProgram, null, 2));
+            const decodedToken = jwtDecode(token);
+            const studentId = decodedToken?.sub;
+            if (!studentId) {
+                Alert.alert("Error", "Invalid session.");
+                return;
+            }
 
-            // Store the updated program and maxQuantity in AsyncStorage
-            await AsyncStorage.getItem("programQuantities").then(async (storedQuantities) => {
-                const quantities = storedQuantities ? JSON.parse(storedQuantities) : {};
-                quantities[programId] = newProgram.maxQuantity;
+            console.log("🔹 Student ID:", studentId);
+            console.log("🔹 Program ID:", programId);
 
-                // Update both 'programQuantities' and 'yourServices'
-                await AsyncStorage.multiSet([
-                    ["programQuantities", JSON.stringify(quantities)],
-                    ["yourServices", JSON.stringify([{ id: programId, ...newProgram }])]
-                ]);
+            const url = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs/register`;
+            console.log("🟢 Sending POST request to:", url);
+
+            const requestBody = JSON.stringify({
+                studentId: studentId,
+                supportingProgramId: programId,
+            });
+            console.log("📩 Request Body:", requestBody);
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: requestBody,
             });
 
-            // Save the programId in signedUpPrograms
-            signedUpPrograms.push(programId);
-            await AsyncStorage.setItem("signedUpPrograms", JSON.stringify(signedUpPrograms));
+            console.log("🔵 Response Status:", response.status);
 
-            Alert.alert("Success", "You have successfully signed up for the program!");
+            if (response.status === 204) {
+                // Retrieve existing sign-ups
+                const existingSignups = await AsyncStorage.getItem("signedUpPrograms");
+                const signedUpPrograms = existingSignups ? JSON.parse(existingSignups) : [];
 
-            // Navigate to the ServiceScreen to reflect updated quantity
-            navigation.navigate("MainScreen", { screen: "Service" });
+                // Check if the student has already signed up for this program
+                const alreadySignedUp = signedUpPrograms.some(
+                    (entry) => entry.programId === programId && entry.studentId === studentId
+                );
 
+                if (!alreadySignedUp) {
+                    // Store both programId and studentId as an object
+                    signedUpPrograms.push({ programId, studentId });
+                    await AsyncStorage.setItem("signedUpPrograms", JSON.stringify(signedUpPrograms));
+                }
+
+                Alert.alert("Success", "You have successfully signed up!");
+                navigation.navigate("MainScreen", { screen: "Service" });
+            } else {
+                throw new Error(`Failed to register. Status: ${response.status}`);
+            }
         } catch (error) {
-            console.error("Error signing up for program:", error);
-            Alert.alert("Error", "Something went wrong. Please try again later.");
+            console.error("🔴 Error in handleSubmit:", error);
+            Alert.alert("Error", error.message || "Something went wrong.");
+        } finally {
+            setUpdating(false);
         }
     };
 
@@ -83,12 +98,9 @@ const SignUpSPScreen = ({ route }) => {
         return <Text style={styles.errorText}>Error loading program details. Please try again.</Text>;
     }
 
-    const programExists = program && Object.keys(program).length > 0;
-    const profileExists = profile && Object.keys(profile).length > 0;
-
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            {profileExists ? (
+            {profile && (
                 <>
                     <Avatar.Image
                         size={100}
@@ -98,9 +110,9 @@ const SignUpSPScreen = ({ route }) => {
                     <Text style={styles.profileName}>{profile.fullName || "N/A"}</Text>
                     <Text style={styles.profileEmail}>{profile.email || "N/A"}</Text>
                 </>
-            ) : <Text>No Profile Found</Text>}
+            )}
 
-            {programExists ? (
+            {program && (
                 <View style={styles.card}>
                     <Text style={styles.sectionHeader}>Program Details</Text>
                     <ProfileDetail label="City" value={program.city || "No City Info"} />
@@ -110,7 +122,7 @@ const SignUpSPScreen = ({ route }) => {
                     <ProfileDetail label="Active Status" value={program.isActive ? "Active" : "Inactive"} />
                     <ProfileDetail label="Start Date" value={program.startDateAt ? new Date(program.startDateAt).toDateString() : "N/A"} />
                 </View>
-            ) : <Text>No Program Details Available</Text>}
+            )}
 
             <Button
                 title={updating ? "Signing Up..." : "Confirm Sign-Up"}
@@ -137,21 +149,6 @@ const styles = StyleSheet.create({
         padding: 20,
         alignItems: "center",
         backgroundColor: "#F4F6F9"
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center"
-    },
-    loadingText: {
-        fontSize: 16,
-        marginTop: 10,
-        color: "#555",
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center"
     },
     errorText: {
         fontSize: 18,

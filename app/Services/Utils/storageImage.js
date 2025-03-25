@@ -17,6 +17,11 @@ const saveImages = async () => {
             3: "https://res.cloudinary.com/dhaltx1cv/image/upload/v1741961016/sb6aqngwbks1x1yx9qec.jpg",
             4: "https://res.cloudinary.com/dhaltx1cv/image/upload/v1741961014/bmah07wzxzscvxgrropz.jpg",
             5: "https://res.cloudinary.com/dhaltx1cv/image/upload/v1741960995/spwz5y6t587w9htcgkfv.jpg",
+            6: "https://res.cloudinary.com/dhaltx1cv/image/upload/v1741961026/nl98cepyq79riihxswg8.jpg",
+            7: "https://res.cloudinary.com/dhaltx1cv/image/upload/v1741961019/jvtbn23bgp2bjamxjsga.jpg",
+            8: "https://res.cloudinary.com/dhaltx1cv/image/upload/v1741961016/sb6aqngwbks1x1yx9qec.jpg",
+            9: "https://res.cloudinary.com/dhaltx1cv/image/upload/v1741961014/bmah07wzxzscvxgrropz.jpg",
+            10: "https://res.cloudinary.com/dhaltx1cv/image/upload/v1741960995/spwz5y6t587w9htcgkfv.jpg",
         }
         await AsyncStorage.setItem("supportingProgramImages", JSON.stringify(supportingProgramImages));
         await AsyncStorage.setItem("blogImages", JSON.stringify(blogImages));

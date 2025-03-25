@@ -17,14 +17,15 @@ const useLogin = () => {
             if (data.access_token) {
                 // Save token and user role into AsyncStorage
                 await AsyncStorage.setItem("authToken", data.access_token);
-
+                
                 const { userRole } = await identityService.saveAuthData(data.access_token);
 
+                // Navigate based on user role
                 switch (userRole.toLowerCase()) {
                     case "student":
                     case "parent":
                     case "psychologist":
-                        navigation.navigate("MainScreen", { userRole });
+                        navigation.replace("MainScreen", { userRole }); 
                         break;
                     default:
                         throw new Error("Unknown role received");

@@ -144,7 +144,8 @@ function AppNavigator() {
                     component={MainTabs}
                     options={{
                         title: "MindSpace",
-                        headerBackVisible: false,
+                        headerBackVisible: false, // This prevents the back arrow from appearing
+                        headerLeft: () => null, // Ensures no back button appears
                         headerStyle: styles.header,
                         headerTitleStyle: styles.headerTitle,
                         headerRight: () => (
@@ -159,6 +160,7 @@ function AppNavigator() {
                         ),
                     }}
                 />
+
                 <Stack.Screen name="ResourceDetailScreen" component={ResourceDetailScreen} />
                 <Stack.Screen name="TakeTestScreen" component={TakeTestScreen} />
                 <Stack.Screen name="ResourceResultScreen" component={ResourceResultScreen} />

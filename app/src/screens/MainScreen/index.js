@@ -1,12 +1,13 @@
-import { Image, FlatList, StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions } from "react-native";
+import { Image, FlatList, StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions, Button } from "react-native";
 import React from "react";
 import useBlogs from "@/app/Services/Features/Blog/useBlogs";
 import useArticles from "@/app/Services/Features/Article/useArticles";
 import { useRef } from "react";
 const { width } = Dimensions.get("window");
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const MainScreen = ({ navigation, route}) => {
-    const { userRole } = route.params || {};  
+const MainScreen = ({ navigation, route }) => {
+    const { userRole } = route.params || {};
     const { blogs, activeIndex, setActiveIndex, flatListRef } = useBlogs();
     const { articles } = useArticles();
     const viewabilityConfig = { viewAreaCoveragePercentThreshold: 50 };
@@ -16,6 +17,15 @@ const MainScreen = ({ navigation, route}) => {
         }
     }).current;
 
+
+    const clearAllData = async () => {
+        try {
+            await AsyncStorage.clear();
+            console.log("✅ AsyncStorage has been cleared!");
+        } catch (error) {
+            console.error("❌ Error clearing AsyncStorage:", error);
+        }
+    };
 
     return (
         <ScrollView style={styles.container}>
@@ -109,6 +119,7 @@ const MainScreen = ({ navigation, route}) => {
                     )}
                 />
             </View>
+
         </ScrollView>
     );
 };
@@ -118,7 +129,7 @@ export default MainScreen;
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    mainBlogContainer: { width: width, alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
+    mainBlogContainer: { width: width, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, top: -100, marginBottom: -200 },
     mainImage: { width: '90%', height: 220, borderRadius: 10 },
     mainText: { fontWeight: 'bold', fontSize: 18, marginTop: 10, textAlign: 'center', paddingHorizontal: 10 },
     readMoreButton: { marginTop: 15, paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#007BFF', borderRadius: 5 },
@@ -127,8 +138,24 @@ const styles = StyleSheet.create({
     indicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#D3D3D3', marginHorizontal: 5 },
     activeIndicator: { backgroundColor: '#007BFF', width: 10, height: 10 },
     blogContainer: { flex: 1, padding: 10 },
-    blogItem: { width: '48%', margin: '1%', padding: 10, borderRadius: 8, alignItems: 'center', backgroundColor: 'lightblue' },
-    blogImage: { width: 130, height: 130, borderRadius: 8, resizeMode: "cover", backgroundColor: "gray" },
+    blogItem: { 
+        width: '48%', 
+        margin: '1%', 
+        padding: 10, 
+        borderRadius: 8, 
+        alignItems: 'center', 
+        backgroundColor: 'lightblue', 
+        marginBottom: 300,
+        justifyContent: 'center' // Ensures content is centered
+    },
+    blogImage: { 
+        width: 130, 
+        height: 130, 
+        borderRadius: 8, 
+        resizeMode: "cover", 
+        backgroundColor: "gray",
+        alignSelf: 'center' // Ensures image is centered inside the container
+    },
     textWrapper: { borderTopWidth: 1, borderTopColor: '#E0E0E0', marginTop: 5, paddingTop: 5 },
     blogText: { fontSize: 16, fontWeight: '600', textAlign: 'center', marginTop: 5, color: '#333', paddingHorizontal: 5 },
     sectionHeader: { fontSize: 18, fontWeight: 'bold', marginVertical: 10, paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: '#E0E0E0', letterSpacing: 1 },
