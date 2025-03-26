@@ -23,7 +23,6 @@ const usePrograms = (programId, userRole) => {
                 const headers = {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${accessToken}`,
-                    "User-Role": userRole, // Pass userRole in headers
                 };
 
                 const fetchJSON = async (url, context) => {

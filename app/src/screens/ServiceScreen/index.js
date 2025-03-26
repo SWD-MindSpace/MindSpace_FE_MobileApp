@@ -1,200 +1,154 @@
 import React, { useEffect, useState } from "react";
 import {
-    StyleSheet,
-    Text,
-    View,
-    FlatList,
-    Image,
-    TouchableOpacity,
-    ActivityIndicator,
+    StyleSheet, Text, View, ScrollView, ActivityIndicator, Image, TouchableOpacity, Alert
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import useFetchPrograms from "@/app/Services/Features/SupProgram/useFetchPrograms";
-import { jwtDecode } from "jwt-decode";
-import CONFIG from "@/app/Services/Configs/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import usePrograms from "@/app/Services/Features/SupProgram/usePrograms";
+import { jwtDecode } from "jwt-decode";
+import CONFIG from '@/app/Services/Configs/config';
 
 const ServiceScreen = () => {
     const navigation = useNavigation();
-    const { programs, loading, error } = useFetchPrograms();
-    const [signedUpPrograms, setSignedUpPrograms] = useState([]);
-    const [studentId, setStudentId] = useState(null);
+    const { programs, loading, error } = usePrograms(null);
+    const [supportingProgramImages, setSupportingProgramImages] = useState({});
+    const [userRole, setUserRole] = useState(null);
 
     useEffect(() => {
-        loadStudentId();
-    }, []);
-
-    useEffect(() => {
-        if (studentId) {
-            fetchProgramHistory(studentId);
-        }
-    }, [studentId]);
-
-    const loadStudentId = async () => {
-        try {
-            const token = await AsyncStorage.getItem("authToken");
-            if (token) {
-                const decodedToken = jwtDecode(token);
-                const id = decodedToken?.sub;
-                if (id) {
-                    setStudentId(id);
-                    console.log("🔹 Logged-in Student ID:", id);
-                } else {
-                    console.warn("⚠️ Student ID not found in token.");
+        const fetchUserRole = async () => {
+            try {
+                const token = await AsyncStorage.getItem("authToken");
+                if (token) {
+                    const decodedToken = jwtDecode(token);
+                    const role = decodedToken?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+                    setUserRole(role || null);
                 }
-            } else {
-                console.warn("⚠️ No auth token found.");
+            } catch (error) {
+                console.error("Error decoding authToken:", error);
             }
-        } catch (error) {
-            console.error("❌ Error loading student ID:", error);
-        }
-    };
+        };
 
-    const fetchProgramHistory = async (studentId) => {
-        try {
-            const token = await AsyncStorage.getItem("authToken");
-            if (!token) return;
+        const fetchImages = async () => {
+            try {
+                const storedImages = await AsyncStorage.getItem("supportingProgramImages");
+                setSupportingProgramImages(storedImages ? JSON.parse(storedImages) : {});
+            } catch (error) {
+                console.error("Error fetching images:", error);
+            }
+        };
 
-            const url = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs/history?StudentId=${studentId}&Sort=joinedAtAsc&page=1&pageSize=10`;
-            console.log("🔹 Fetching program history from:", url);
-
-            const response = await fetch(url, {
-                method: "GET",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (!response.ok) return;
-
-            const data = await response.json();
-            console.log("🔹 API Response:", JSON.stringify(data, null, 2));
-
-            if (!Array.isArray(data.data)) return;
-
-            setSignedUpPrograms(data.data);
-        } catch (error) {
-            console.error("❌ Error fetching program history:", error);
-            setSignedUpPrograms([]);
-        }
-    };
-
-    const handleCancel = async (programId) => {
-        try {
-            console.log("🚀 Cancelling program with ID:", programId);
-            console.log("🚀 Cancelling program with studentID:", studentId);
-            if (!studentId) return;
-
-            const url = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs/unregister`;
-            console.log("🔹 API Request URL:", url);
-
-            const token = await AsyncStorage.getItem("authToken");
-            if (!token) return;
-
-            const response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ studentId, supportingProgramId: programId }),
-            });
-
-            console.log("🔹 Response Status:", response.status);
-
-            if (!response.ok) return;
-
-            console.log("✅ Unregistration successful!");
-            setSignedUpPrograms((prev) => prev.filter((p) => p.id !== programId));
-        } catch (error) {
-            console.error("❌ Error canceling program:", error);
-        }
-    };
+        fetchUserRole();
+        fetchImages();
+    }, []);
 
     if (loading) {
         return <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />;
     }
 
     if (error) {
-        return <Text style={styles.errorText}>Failed to load programs. Please try again later.</Text>;
+        return <Text style={styles.errorText}>{error}</Text>;
     }
 
     return (
-        <FlatList
-            data={programs}
-            keyExtractor={(item) => item.id.toString()}
-            ListHeaderComponent={<Text style={styles.headerText}>Available Supporting Programs</Text>}
-            renderItem={({ item }) => {
-                const isSignedUp = signedUpPrograms.some((p) => p.id === item.id);
-
-                return (
+        <ScrollView contentContainerStyle={styles.container}>
+            <Text style={styles.header}>Available Supporting Programs</Text>
+            {programs.length > 0 ? (
+                programs.map((program) => (
                     <TouchableOpacity
-                        style={styles.card}
-                        onPress={() => navigation.navigate("SPDetailScreen", { programId: item.id })}
-                        disabled={isSignedUp}
+                        key={program.id}
+                        style={[styles.card, !program.isActive && styles.inactiveCard]}
+                        onPress={() => {
+                            if (userRole === "parent") {
+                                Alert.alert("Access Denied", "Parents cannot sign up for programs.");
+                                return;
+                            }
+                            navigation.navigate("SPDetailScreen", { programId: program.id });
+                        }}
+                        disabled={!program.isActive || userRole === "parent"}
                     >
                         <Image
-                            source={{ uri: item.cloudinaryImageUrl || "https://via.placeholder.com/80" }}
-                            style={styles.thumbnail}
+                            source={{ uri: supportingProgramImages[program.id] || "https://via.placeholder.com/150" }}
+                            style={styles.image}
                         />
-                        <View style={styles.cardContent}>
-                            <Text style={styles.title}>{item.city}</Text>
-                            <Text style={styles.address}>{item.street}</Text>
-                            <Text style={styles.date}>Start Date: {new Date(item.startDateAt).toDateString()}</Text>
+                        <View style={styles.textContainer}>
+                            <Text style={styles.title}>{program.title}</Text>
+                            <Text style={styles.details}> {program.street || "No street info"}</Text>
+                            <Text style={styles.details}> {program.city || "N/A"}</Text>
+                            <Text style={styles.details}> Max Quantity: {program.maxQuantity}</Text>
+                            <Text style={styles.startDate}> Start Date: {program.startDateAt}</Text>
+                            {!program.isActive && <Text style={styles.inactiveText}>Inactive</Text>}
                         </View>
-                        <Text style={styles.quantity}>{isSignedUp ? "Already Signed Up" : "Available"}</Text>
                     </TouchableOpacity>
-                );
-            }}
-            ListFooterComponent={
-                <View style={styles.container}>
-                    <Text style={styles.headerText}>Your Signed-Up Programs</Text>
-                    {signedUpPrograms.length > 0 ? (
-                        signedUpPrograms.map((program) => (
-                            <View key={program.id} style={styles.signedUpCard}>
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate("SPDetailScreen", { programId: program.id })}
-                                >
-                                    <Image source={{ uri: program.cloudinaryImageUrl }} style={styles.thumbnail} />
-                                    <View style={styles.cardContent}>
-                                        <Text style={styles.title}>{program.city}</Text>
-                                        <Text style={styles.address}>{program.street}</Text>
-                                        <Text style={styles.date}>Start Date: {new Date(program.startDateAt).toDateString()}</Text>
-                                    </View>
-                                    <Text style={styles.quantity}>Signed Up</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.cancelButton}
-                                    onPress={() => handleCancel(program.id)}
-                                >
-                                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ))
-                    ) : (
-                        <Text style={styles.noServicesText}>You have not signed up for any programs yet.</Text>
-                    )}
-                </View>
-            }
-        />
+                ))
+            ) : (
+                <Text style={styles.noDataText}>No programs available.</Text>
+            )}
+        </ScrollView>
     );
 };
 
-export default ServiceScreen;
-
 const styles = StyleSheet.create({
-    container: { padding: 16 },
-    headerText: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-    card: { flexDirection: "row", backgroundColor: "#FFF", borderRadius: 10, padding: 10, marginVertical: 8, elevation: 3, alignItems: "center" },
-    signedUpCard: { backgroundColor: "#F8F8F8", borderRadius: 10, padding: 10, marginVertical: 8, elevation: 3 },
-    thumbnail: { width: 80, height: 80, borderRadius: 8, marginRight: 10 },
-    cardContent: { flex: 1 },
-    title: { fontSize: 16, fontWeight: "bold" },
-    address: { fontSize: 14, color: "#666" },
-    date: { fontSize: 12, color: "#888" },
-    quantity: { fontSize: 14, fontWeight: "bold", color: "#007AFF" },
-    cancelButton: { backgroundColor: "#FF3B30", padding: 8, borderRadius: 5, alignItems: "center", marginTop: 10 },
-    cancelButtonText: { color: "#FFF", fontWeight: "bold" },
-    noServicesText: { textAlign: "center", marginTop: 10, fontSize: 16, color: "#888" },
+    container: {
+        flexGrow: 1,
+        padding: 20,
+        backgroundColor: "#F4F6F9",
+    },
+    loader: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    header: {
+        fontSize: 22,
+        fontWeight: "bold",
+        color: "#007AFF",
+        textAlign: "center",
+        marginBottom: 15,
+    },
+    card: {
+        backgroundColor: "#FFF",
+        borderRadius: 12,
+        marginBottom: 15,
+        elevation: 4,
+        overflow: "hidden",
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 10,
+    },
+    textContainer: {
+        flex: 1,
+        marginLeft: 10,
+    },
+    image: {
+        width: 80,
+        height: 80,
+        borderRadius: 8,
+    },
+    title: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#333",
+    },
+    details: {
+        fontSize: 16,
+        color: "#555",
+    },
+    startDate: {
+        fontSize: 14,
+        fontStyle: "italic",
+        color: "#007AFF",
+    },
+    noDataText: {
+        fontSize: 16,
+        color: "#888",
+        textAlign: "center",
+        marginVertical: 10,
+    },
+    errorText: {
+        fontSize: 16,
+        color: "red",
+        textAlign: "center",
+    },
 });
+
+export default ServiceScreen;
