@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchTests } from '@/app/Services/Features/Test/testService';
+import { fetchTests, fetchTestDetails } from '@/app/Services/Features/Test/testService';
 
 const useTests = (pageIndex, pageSize, selectedCategory) => {
     const [tests, setTests] = useState([]);
@@ -14,32 +14,42 @@ const useTests = (pageIndex, pageSize, selectedCategory) => {
         const loadUserRole = async () => {
             const role = await AsyncStorage.getItem('userRole');
             if (role) {
-                const formattedRole = role.trim().toLowerCase(); // Ensure consistent formatting
-                setUserRole(formattedRole);
-                console.log("Loaded User Role:", formattedRole); // Debugging
+                setUserRole(role.trim().toLowerCase());
+                console.log("Loaded User Role:", role.trim().toLowerCase());
             }
         };
         loadUserRole();
     }, []);
 
-    // Fetch tests based on userRole
+    // Fetch tests based on userRole and category
     useEffect(() => {
-        if (!userRole) return; // Ensure userRole is available before fetching
+        if (!userRole) return;
 
         const getTests = async () => {
             setLoading(true);
             try {
-                console.log("Fetching tests for role:", userRole); // Debugging
-
+                console.log("Fetching tests for role:", userRole);
                 const { data, count } = await fetchTests(pageIndex, pageSize, userRole, selectedCategory);
-                console.log("Fetched Tests:", data); // Debugging
+                console.log("Fetched Tests:", data);
+
+                // Extract unique categories
+                setCategories([...new Set(data.map(test => test.testCategory.name))]);
+
+                // If the selected category is "Parenting", fetch full details
+                if (selectedCategory === "Parenting") {
+                    const parentingTest = data.find(test => test.testCategory.name === "Parenting");
+                    if (parentingTest) {
+                        console.log("Fetching additional details for Parenting test...");
+                        const detailedTest = await fetchTestDetails(parentingTest.id);
+                        setTests([detailedTest]); // Replace with detailed test
+                        setTotalCount(1);
+                        setLoading(false);
+                        return;
+                    }
+                }
 
                 setTests(data);
                 setTotalCount(count);
-
-                // Extract unique categories
-                const uniqueCategories = [...new Set(data.map(test => test.testCategory.name))];
-                setCategories(uniqueCategories);
             } catch (error) {
                 console.error("Error loading tests:", error);
             } finally {

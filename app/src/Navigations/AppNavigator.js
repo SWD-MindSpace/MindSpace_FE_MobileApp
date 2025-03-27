@@ -22,6 +22,8 @@ import ArticleDetail from '../Screens/ArticleDetail';
 import TakeTestScreen from '@/app/src/Screens/TakeTestScreen';
 import ResourceResultScreen from '@/app/src/Screens/ResourceResultScreen';
 import TestHistoryScreen from '@/app/src/Screens/TestHistoryScreen';
+import AppointmentScreen from '@/app/src/Screens/AppointmentScreen';
+
 import { useEffect } from 'react';
 
 function MainTabs() {
@@ -46,8 +48,7 @@ function MainTabs() {
 
 
     if (userRole === null) {
-        // You can show a loading spinner or some placeholder until userRole is fetched
-        return null; // Or a loading component
+        return null; 
     }
 
     return (
@@ -59,6 +60,7 @@ function MainTabs() {
                     else if (route.name === 'Resource') iconName = 'book';
                     else if (route.name === 'Service') iconName = 'settings';
                     else if (route.name === 'Profile') iconName = 'person';
+                    else if (route.name === 'Appointment') iconName = 'calendar';
                     return <Ionicons name={iconName} size={size} color={color} />;
                 },
                 tabBarActiveTintColor: '#007AFF',
@@ -75,6 +77,7 @@ function MainTabs() {
             <Tab.Screen name="Resource" options={{ headerShown: false }}>
                 {props => <ResourceScreen {...props} userRole={userRole} />}
             </Tab.Screen>
+
             <Tab.Screen name="Service" options={{ headerShown: false }}>
                 {props => <ServiceScreen {...props} userRole={userRole} />}
             </Tab.Screen>

@@ -4,6 +4,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import useProgramDetail from "@/app/Services/Features/SupProgram/useProgramDetail";
+import CONFIG from '@/app/Services/Configs/config';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SPDetailScreen = ({ route }) => {
@@ -14,10 +15,40 @@ const SPDetailScreen = ({ route }) => {
 
     useEffect(() => {
         const checkIfSignedUp = async () => {
-            const signedUpPrograms = await AsyncStorage.getItem("signedUpPrograms");
-            setIsSignedUp(signedUpPrograms ? JSON.parse(signedUpPrograms).includes(programId) : false);
-        };
-        checkIfSignedUp();
+            try {
+                const authToken = await AsyncStorage.getItem("authToken");
+        
+                const response = await fetch(
+                    `${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs/history?StudentId=1&SuportingProgramId=&JoinedAtForm&JoinedAtTo&Sort=joinedAtAsc`,
+                    {
+                        method: "GET",
+                        headers: {
+                            "Authorization": `Bearer ${authToken}`,
+                            "Accept": "application/json",
+                            "Content-Type": "application/json",
+                        },
+                    }
+                );
+        
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch signed-up programs. Status: ${response.status}`);
+                }
+        
+                const result = await response.json(); // Convert response to JSON
+        
+                console.log("API Response:", result);
+        
+                // Ensure result.data is an array before calling .some()
+                if (result.data && Array.isArray(result.data)) {
+                    const signedUp = result.data.some(item => item.id === programId);
+                    setIsSignedUp(signedUp);
+                } else {
+                    console.error("Unexpected API response format. Expected an array in 'data':", result);
+                }
+            } catch (err) {
+                console.error("Error fetching signed-up programs:", err);
+            }
+        };        
     }, [programId]);
 
     if (loading) {
