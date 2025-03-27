@@ -18,8 +18,27 @@ const handleResponse = async (response) => {
 const supProgramService = {
     async fetchPrograms() {
         try {
-            const response = await fetch(`${API_BASE_URL}/supporting-programs`);
-            return await handleResponse(response);
+            const accessToken = await getAuthToken();
+            if (!accessToken) {
+                throw new Error("Authentication required. Please log in.");
+            }
+
+            const response = await fetch(`${API_BASE_URL}/supporting-programs`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${accessToken}`,
+                },
+            });
+
+            const jsonData = await handleResponse(response);
+
+            const spImageUrls = await AsyncStorage.getItem("supportingProgramImages");
+            const jsonParseSPImageUrls = JSON.parse(spImageUrls) || {};
+
+            return jsonData?.data.map((item) => ({
+                ...item,
+                cloudinaryImageUrl: jsonParseSPImageUrls[item.id] || null,
+            })) || [];
         } catch (error) {
             console.error("Error fetching programs:", error);
             throw error;
@@ -41,7 +60,7 @@ const supProgramService = {
             const token = await getAuthToken();
             if (!token) throw new Error("No authentication token found. Please log in again.");
 
-            const response = await fetch(`${API_BASE_URL}/identity/profile`, {
+            const response = await fetch(`${API_BASE_URL}/identities/profile`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",

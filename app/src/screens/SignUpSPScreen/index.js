@@ -1,68 +1,135 @@
-import React from "react";
-import { StyleSheet, Text, View, Button, ScrollView, Alert, ActivityIndicator } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+    StyleSheet, Text, View, Button, ScrollView, Alert, ActivityIndicator
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Avatar } from "react-native-paper";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import usePrograms from "@/app/Services/Features/SupProgram/usePrograms";
+import { jwtDecode } from "jwt-decode";
+import CONFIG from '@/app/Services/Configs/config';
 
 const SignUpSPScreen = ({ route }) => {
-    const { programId } = route.params;
-    const { program, profile, loading, error } = usePrograms(programId);
     const navigation = useNavigation();
+    const programId = Number(route.params?.programId);
+    console.log("🔹 Received programId:", programId);
 
-    const handleSubmit = () => {
-        Alert.alert("Success", "You have successfully signed up for the program!");
-        navigation.navigate('MainScreen', { screen: 'Service' });
+    if (!programId || isNaN(programId) || programId <= 0) {
+        Alert.alert("Error", "Invalid program ID.");
+        return null;
+    }
+
+    const { program, profile, loading, error } = usePrograms(programId);
+    const [updating, setUpdating] = useState(false);
+
+    const handleSubmit = async () => {
+        try {
+            setUpdating(true);
+            const token = await AsyncStorage.getItem("authToken");
+            if (!token) {
+                Alert.alert("Error", "User not authenticated.");
+                return;
+            }
+
+            const decodedToken = jwtDecode(token);
+            const studentId = decodedToken?.sub;
+            if (!studentId) {
+                Alert.alert("Error", "Invalid session.");
+                return;
+            }
+
+            console.log("🔹 Student ID:", studentId);
+            console.log("🔹 Program ID:", programId);
+
+            const url = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/supporting-programs/register`;
+            console.log("🟢 Sending POST request to:", url);
+
+            const requestBody = JSON.stringify({
+                studentId: studentId,
+                supportingProgramId: programId,
+            });
+            console.log("📩 Request Body:", requestBody);
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: requestBody,
+            });
+
+            console.log("🔵 Response Status:", response.status);
+
+            if (response.status === 204) {
+                // Retrieve existing sign-ups
+                const existingSignups = await AsyncStorage.getItem("signedUpPrograms");
+                const signedUpPrograms = existingSignups ? JSON.parse(existingSignups) : [];
+
+                // Check if the student has already signed up for this program
+                const alreadySignedUp = signedUpPrograms.some(
+                    (entry) => entry.programId === programId && entry.studentId === studentId
+                );
+
+                if (!alreadySignedUp) {
+                    // Store both programId and studentId as an object
+                    signedUpPrograms.push({ programId, studentId });
+                    await AsyncStorage.setItem("signedUpPrograms", JSON.stringify(signedUpPrograms));
+                }
+
+                Alert.alert("Success", "You have successfully signed up!");
+                navigation.navigate("MainScreen", { screen: "Service" });
+            } else {
+                throw new Error(`Failed to register. Status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error("🔴 Error in handleSubmit:", error);
+            Alert.alert("Error", error.message || "Something went wrong.");
+        } finally {
+            setUpdating(false);
+        }
     };
 
     if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#007AFF" />
-                <Text style={styles.loadingText}>Loading profile...</Text>
-            </View>
-        );
+        return <ActivityIndicator size="large" color="#007AFF" />;
     }
 
     if (error) {
-        return (
-            <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-            </View>
-        );
+        return <Text style={styles.errorText}>Error loading program details. Please try again.</Text>;
     }
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            {/* User Avatar & Name */}
-            <Avatar.Image
-                size={100}
-                source={{ uri: profile?.avatarUrl || 'https://via.placeholder.com/100' }}
-                style={styles.avatar}
+            {profile && (
+                <>
+                    <Avatar.Image
+                        size={100}
+                        source={{ uri: profile.avatarUrl || 'https://via.placeholder.com/100' }}
+                        style={styles.avatar}
+                    />
+                    <Text style={styles.profileName}>{profile.fullName || "N/A"}</Text>
+                    <Text style={styles.profileEmail}>{profile.email || "N/A"}</Text>
+                </>
+            )}
+
+            {program && (
+                <View style={styles.card}>
+                    <Text style={styles.sectionHeader}>Program Details</Text>
+                    <ProfileDetail label="City" value={program.city || "No City Info"} />
+                    <ProfileDetail label="Street" value={program.street || "N/A"} />
+                    <ProfileDetail label="Postal Code" value={program.postalCode || "N/A"} />
+                    <ProfileDetail label="Max Quantity" value={program.maxQuantity} />
+                    <ProfileDetail label="Active Status" value={program.isActive ? "Active" : "Inactive"} />
+                    <ProfileDetail label="Start Date" value={program.startDateAt ? new Date(program.startDateAt).toDateString() : "N/A"} />
+                </View>
+            )}
+
+            <Button
+                title={updating ? "Signing Up..." : "Confirm Sign-Up"}
+                onPress={handleSubmit}
+                color="#007AFF"
+                disabled={updating}
             />
-            <Text style={styles.profileName}>{profile?.fullName || "N/A"}</Text>
-            <Text style={styles.profileEmail}>{profile?.email || "N/A"}</Text>
-
-            {/* User Profile Card */}
-            <View style={styles.card}>
-                <Text style={styles.sectionHeader}>User Profile</Text>
-                <ProfileDetail label="Username" value={profile?.userName} />
-                <ProfileDetail label="Date of Birth" value={profile?.dateOfBirth} />
-                <ProfileDetail label="Phone Number" value={profile?.phoneNumber || "N/A"} />
-            </View>
-
-            {/* Program Details Card */}
-            <View style={styles.card}>
-                <Text style={styles.sectionHeader}>Program Details</Text>
-                <ProfileDetail label="City" value={program?.city || "No City Info"} />
-                <ProfileDetail label="Street" value={program?.street || "N/A"} />
-                <ProfileDetail label="Postal Code" value={program?.postalCode || "N/A"} />
-                <ProfileDetail label="Max Quantity" value={program?.maxQuantity} />
-                <ProfileDetail label="Active Status" value={program?.isActive ? "Active" : "Inactive"} />
-                <ProfileDetail label="Start Date" value={program?.startDateAt ? new Date(program.startDateAt).toDateString() : "N/A"} />
-            </View>
-
-            {/* Sign-Up Button */}
-            <Button title="Confirm Sign-Up" onPress={handleSubmit} color="#007AFF" />
         </ScrollView>
     );
 };
@@ -82,21 +149,6 @@ const styles = StyleSheet.create({
         padding: 20,
         alignItems: "center",
         backgroundColor: "#F4F6F9"
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center"
-    },
-    loadingText: {
-        fontSize: 16,
-        marginTop: 10,
-        color: "#555",
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center"
     },
     errorText: {
         fontSize: 18,

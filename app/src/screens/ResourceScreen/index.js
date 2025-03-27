@@ -10,7 +10,7 @@ const ResourceScreen = ({ navigation }) => {
 
     const { tests, categories, loading, totalCount } = useTests(pageIndex, pageSize, selectedCategory);
     
-    const totalPages = Math.ceil(totalCount / pageSize); // Ensure correct total page calculation
+    const totalPages = Math.ceil(totalCount / pageSize); 
     const hasNextPage = pageIndex < totalPages;
     const hasPrevPage = pageIndex > 1;
 

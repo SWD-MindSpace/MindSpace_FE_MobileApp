@@ -22,9 +22,35 @@ import ArticleDetail from '../Screens/ArticleDetail';
 import TakeTestScreen from '@/app/src/Screens/TakeTestScreen';
 import ResourceResultScreen from '@/app/src/Screens/ResourceResultScreen';
 import TestHistoryScreen from '@/app/src/Screens/TestHistoryScreen';
+import AppointmentScreen from '@/app/src/Screens/AppointmentScreen';
+
+import { useEffect } from 'react';
 
 function MainTabs() {
     const Tab = createBottomTabNavigator();
+    const [userRole, setUserRole] = useState(null); // state to store the userRole
+    const navigation = useNavigation();
+
+    useEffect(() => {
+        const fetchUserRole = async () => {
+            try {
+                const storedRole = await AsyncStorage.getItem('userRole');
+                if (storedRole) {
+                    setUserRole(storedRole);
+                }
+            } catch (error) {
+                console.error("Error fetching userRole from AsyncStorage", error);
+            }
+        };
+
+        fetchUserRole();
+    }, []);
+
+
+    if (userRole === null) {
+        return null; 
+    }
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -34,6 +60,7 @@ function MainTabs() {
                     else if (route.name === 'Resource') iconName = 'book';
                     else if (route.name === 'Service') iconName = 'settings';
                     else if (route.name === 'Profile') iconName = 'person';
+                    else if (route.name === 'Appointment') iconName = 'calendar';
                     return <Ionicons name={iconName} size={size} color={color} />;
                 },
                 tabBarActiveTintColor: '#007AFF',
@@ -41,9 +68,20 @@ function MainTabs() {
                 tabBarStyle: { backgroundColor: 'white', paddingBottom: 5, height: 60 },
             })}
         >
-            <Tab.Screen name="Home" component={MainScreen} options={{ headerShown: false }} />
-            <Tab.Screen name="Resource" component={ResourceScreen} options={{ headerShown: false }} />
-            <Tab.Screen name="Service" component={ServiceScreen} options={{ headerShown: false }} />
+            <Tab.Screen
+                name="Home"
+                component={MainScreen}
+                initialParams={{ userRole }} // Pass userRole as a parameter to MainScreen
+                options={{ headerShown: false }}
+            />
+            <Tab.Screen name="Resource" options={{ headerShown: false }}>
+                {props => <ResourceScreen {...props} userRole={userRole} />}
+            </Tab.Screen>
+
+            <Tab.Screen name="Service" options={{ headerShown: false }}>
+                {props => <ServiceScreen {...props} userRole={userRole} />}
+            </Tab.Screen>
+
             <Tab.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
         </Tab.Navigator>
     );
@@ -55,49 +93,49 @@ function AppNavigator() {
     const [menuVisible, setMenuVisible] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
 
-    const apiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/logout`;
+    const apiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identities/logout`;
 
     const handleSignOut = async (navigation) => {
         try {
             const token = await AsyncStorage.getItem('authToken');
-
             if (!token) {
                 console.warn("No auth token found, redirecting to login.");
                 await AsyncStorage.removeItem('userRole');
+                await AsyncStorage.removeItem('studentId');
+                await AsyncStorage.removeItem('parentId');
                 navigation.replace("LoginScreen");
                 return;
             }
 
-            console.log("Logging out with token:", token);
+            // Call the API to log out
             const response = await fetch(apiURL, {
-                method: "POST",
+                method: 'POST',
                 headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
             });
 
             if (response.ok) {
-                console.log("Logout successful.");
+                console.log("Successfully logged out");
+
+                // Clear all related data
                 await AsyncStorage.removeItem('authToken');
                 await AsyncStorage.removeItem('userRole');
+                await AsyncStorage.removeItem('studentId');
+                await AsyncStorage.removeItem('parentId');
                 setMenuVisible(false);
+                // Navigate to login screen after logout
                 navigation.navigate("LoginScreen");
             } else {
-                console.warn("Logout failed:", response.status);
-                if (response.status === 401) {
-                    console.warn("Token might be expired. Removing token and redirecting.");
-                    await AsyncStorage.removeItem('authToken');
-                    await AsyncStorage.removeItem('userRole');
-                    navigation.replace("LoginScreen");
-                }
+                console.error("Logout failed:", response.status);
+                Alert.alert("Logout Failed", "Something went wrong. Please try again.");
             }
         } catch (error) {
             console.error("Error during logout:", error);
             Alert.alert("Logout Failed", "Something went wrong. Please try again.");
         }
     };
-
 
     return (
         <>
@@ -109,7 +147,8 @@ function AppNavigator() {
                     component={MainTabs}
                     options={{
                         title: "MindSpace",
-                        headerBackVisible: false,
+                        headerBackVisible: false, // This prevents the back arrow from appearing
+                        headerLeft: () => null, // Ensures no back button appears
                         headerStyle: styles.header,
                         headerTitleStyle: styles.headerTitle,
                         headerRight: () => (
@@ -124,6 +163,7 @@ function AppNavigator() {
                         ),
                     }}
                 />
+
                 <Stack.Screen name="ResourceDetailScreen" component={ResourceDetailScreen} />
                 <Stack.Screen name="TakeTestScreen" component={TakeTestScreen} />
                 <Stack.Screen name="ResourceResultScreen" component={ResourceResultScreen} />
@@ -144,7 +184,7 @@ function AppNavigator() {
                             style={styles.dropdownItem}
                             onPress={() => {
                                 setMenuVisible(false);
-                                navigation.navigate("ProfileScreen");
+                                navigation.navigate("MainScreen", { screen: "Profile" });
                             }}
                         >
                             <Text style={styles.dropdownText}>See Profile</Text>

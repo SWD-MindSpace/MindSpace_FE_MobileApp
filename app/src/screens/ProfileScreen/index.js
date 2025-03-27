@@ -5,7 +5,7 @@ import CONFIG from '@/app/Services/Configs/config';
 import { Avatar } from 'react-native-paper';
 
 const ProfileScreen = () => {
-    const profileApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identity/profile`;
+    const profileApiURL = `${CONFIG.baseUrl}/${CONFIG.apiVersion}/identities/profile`;
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
 
