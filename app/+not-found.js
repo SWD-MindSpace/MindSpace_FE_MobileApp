@@ -1,14 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 
-const Navigator = () => {
+const Notfound = () => {
   return (
     <View>
-      <Text>Navigator</Text>
+      <Text></Text>
     </View>
   )
 }
 
-export default Navigator
+export default Notfound
 
 const styles = StyleSheet.create({})
